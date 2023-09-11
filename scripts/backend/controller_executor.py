@@ -7,8 +7,12 @@ worker_address = config["networks"][network.show_active()]["worker_address"]
 
 
 class ControllerExecutor:
-
-    def trigger_strategy_action(self, vault_address: str, depositor_address: str) -> object:
+    def trigger_strategy_action(
+        self, vault_address: str, depositor_address: str
+    ) -> object:
         return controller_contract.triggerStrategyAction(
-            worker_address, vault_address, depositor_address, {"from": BACKEND_BOT_WALLET}
+            worker_address,
+            vault_address,
+            depositor_address,
+            {"from": BACKEND_BOT_WALLET},
         )

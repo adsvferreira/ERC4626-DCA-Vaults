@@ -11,7 +11,9 @@ class EventListener:
 
     # returns the new vaults addresses
     def event_listener_vaults_update(self) -> list[str]:
-        event_filter = vaults_factory_contract.events.VaultCreated.createFilter(fromBlock=self.block_number)
+        event_filter = vaults_factory_contract.events.VaultCreated.createFilter(
+            fromBlock=self.block_number
+        )
         entries = event_filter.get_all_entries()
         self.block_number = web3.eth.blockNumber
 
