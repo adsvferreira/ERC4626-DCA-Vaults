@@ -33,6 +33,11 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVaultERC4626 {
     uint8[] public buyAssetsDecimals;
     uint256 public buyAssetsLength;
     uint256 public lastUpdate;
+    /**
+     * @dev Note: Removing entries from dynamic arrays can be gas-expensive.
+     * The `allDepositorAddresses` array stores all users who have deposited funds in this vault,
+     * even if they have already withdrawn their entire balance. Use `balanceOf` to check individual balances.
+     */
     address[] public allDepositorAddresses;
     uint256 public allDepositorsLength;
 
@@ -192,7 +197,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVaultERC4626 {
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal virtual override {
+    ) internal override {
         // **************************************** ERC4262 ****************************************
         // If _asset is ERC777, `transferFrom` can trigger a reentrancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,

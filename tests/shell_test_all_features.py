@@ -36,12 +36,8 @@ weth_address = config["networks"][network.show_active()]["dex_main_token_address
 wbtc_address = "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f"
 arb_address = "0x912ce59144191c1204e64559fe8253a0e49e6548"
 lon_address = "0x55678cd083fcdc2947a0df635c93c838c89454a3"
-dex_router_address = config["networks"][network.show_active()][
-    "dex_router_address"
-]  # ARBITRUM Sushi
-dex_factory_address = config["networks"][network.show_active()][
-    "dex_factory_address"
-]  # ARBITRUM Sushi
+dex_router_address = config["networks"][network.show_active()]["dex_router_address"]  # ARBITRUM Sushi
+dex_factory_address = config["networks"][network.show_active()]["dex_factory_address"]  # ARBITRUM Sushi
 
 
 treasury_fixed_fee_on_vault_creation = 100_000_000_000_000  # 0.001 ETH
@@ -60,9 +56,7 @@ controller = Controller[-1]
 controller_address = controller.address
 
 # STRATEGY WORKER
-tx3 = StrategyWorker.deploy(
-    dex_router_address, weth_address, controller_address, {"from": dev_wallet}
-)
+tx3 = StrategyWorker.deploy(dex_router_address, weth_address, controller_address, {"from": dev_wallet})
 strategy_worker = StrategyWorker[-1]
 strategy_worker_address = strategy_worker.address
 
@@ -127,9 +121,7 @@ created_strategy_vault.allDepositorsLength()
 created_strategy_vault.allDepositorAddresses(0)
 
 # WITHDRAW
-tx8 = created_strategy_vault.withdraw(
-    10000, dev_wallet, dev_wallet, {"from": dev_wallet}
-)
+tx8 = created_strategy_vault.withdraw(10000, dev_wallet, dev_wallet, {"from": dev_wallet})
 created_strategy_vault.balanceOf(dev_wallet)
 created_strategy_vault.totalSupply()
 
@@ -137,9 +129,7 @@ created_strategy_vault.totalSupply()
 tx9 = usdc.approve(created_strategy_vault_address, 3_000_000, {"from": dev_wallet_2})
 
 # NON-CREATOR DEPOSIT
-tx10 = created_strategy_vault.deposit(
-    300_000, dev_wallet_2.address, {"from": dev_wallet_2}
-)
+tx10 = created_strategy_vault.deposit(300_000, dev_wallet_2.address, {"from": dev_wallet_2})
 created_strategy_vault.balanceOf(dev_wallet_2)
 created_strategy_vault.balanceOf(dev_wallet)
 created_strategy_vault.allDepositorsLength()
@@ -155,9 +145,7 @@ created_strategy_vault.balanceOf(dev_wallet)
 created_strategy_vault.balanceOf(dev_wallet_2)
 
 # USER NEEDS TO GIVE UNLIMITED ALLOWANCE TO WORKER FOR USING VAULT LP BALANCES
-tx12 = created_strategy_vault.approve(
-    strategy_worker_address, 9_999_999_999_999_999_999, {"from": dev_wallet_2}
-)
+tx12 = created_strategy_vault.approve(strategy_worker_address, 9_999_999_999_999_999_999, {"from": dev_wallet_2})
 
 weth = Contract.from_explorer(weth_address)
 arb = Contract.from_explorer(arb_address)
