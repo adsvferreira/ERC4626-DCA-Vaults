@@ -105,3 +105,11 @@ PRIVATE_KEY_1 - This wallet must have enough ether and token balances for creati
 PRIVATE_KEY_2 - This wallet must have enough ether and token balances for executing 1 deposit.
 
 PRIVATE_KEY_3 - This wallet must be empty.
+
+Now, you should be able to run all tests on your locally forked Arbitrum Mainnet by executing the following command:
+
+```
+brownie test -s --network arbitrum-main-fork
+```
+
+**Tip:** Add **--interactive** to the provided command if you want to keep a Brownie shell open after some tests fail.
