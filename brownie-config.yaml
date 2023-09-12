@@ -29,11 +29,26 @@ networks:
         "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
       ] # GMX + WETH
     vault_name: "GMX/WETH DCA Vault"
-    vault_symbol: "ARB/WETH_DCA"
+    vault_symbol: "GMX/WETH_DCA"
     vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
     controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
     worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
     treasury_address: "0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248"
+    token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON
+    too_many_buy_token_addresses:
+      [
+        "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
+        "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+        "0x912ce59144191c1204e64559fe8253a0e49e6548",
+        "0x51318b7d00db7acc4026c88c3952b66278b6a67f",
+        "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
+        "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
+        "0x6c2c06790b3e3e3c38e12ee22f8183b37a13ee55",
+        "0x0c880f6761f1af8d9aa9c466984b80dab9a8c9e8",
+        "0xd4d42f0b6def4ce0383636770ef773390d85c61a",
+        "0x371c7ec6d8039ff7933a2aa28eb827ffe1f52f07",
+        "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
+      ]
   arbitrum-main:
     verify: True
     dex_router_address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # ARBITRUM Sushi
@@ -46,12 +61,26 @@ networks:
         "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
         "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
       ] # GMX + WETH
-    vault_name: "ARB/WETH DCA Vault"
-    vault_symbol: "ARB/WETH_DCA"
+    vault_name: "GMX/WETH DCA Vault"
+    vault_symbol: "GMX/WETH_DCA"
     vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
     controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
     worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
     treasury_address: "0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248"
+    too_many_buy_token_addresses:
+      [
+        "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
+        "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+        "0x912ce59144191c1204e64559fe8253a0e49e6548",
+        "0x51318b7d00db7acc4026c88c3952b66278b6a67f",
+        "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
+        "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
+        "0x6c2c06790b3e3e3c38e12ee22f8183b37a13ee55",
+        "0x0c880f6761f1af8d9aa9c466984b80dab9a8c9e8",
+        "0xd4d42f0b6def4ce0383636770ef773390d85c61a",
+        "0x371c7ec6d8039ff7933a2aa28eb827ffe1f52f07",
+        "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
+      ]
 strategy-params:
   buy_amounts: [10_000, 10_000] # Considering deposit token addr
   buy_frequency: 0 # Daily
@@ -60,3 +89,4 @@ protocol-params:
   treasury_fixed_fee_on_vault_creation: 100_000_000_000_000 # Ether amount (0.001)
   creator_percentage_fee_on_deposit: 25 #0.25%
   treasury_percentage_fee_on_balance_update: 25 #0.25%
+  token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON

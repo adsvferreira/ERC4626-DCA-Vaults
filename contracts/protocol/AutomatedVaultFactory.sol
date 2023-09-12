@@ -61,6 +61,11 @@ contract AutomatedVaultsFactory {
             memory initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
+        require(
+            msg.value >= treasuryFixedFeeOnVaultCreation,
+            "ETHER SENT MUST COVER VAULT CREATION FEE"
+        );
+
         _validateCreateVaultInputs(initMultiAssetVaultFactoryParams);
 
         // SEND CREATION FEE TO PROTOCOL TREASURY
@@ -114,6 +119,10 @@ contract AutomatedVaultsFactory {
         address _depositAsset,
         address _buyAsset
     ) external view returns (bool) {
+        require(
+            _depositAsset != _buyAsset,
+            "BUY ASSET LIST CONTAINS DEPOSIT ASSET"
+        );
         if (uniswapV2Factory.getPair(_depositAsset, _buyAsset) != address(0)) {
             return true;
         }
