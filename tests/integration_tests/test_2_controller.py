@@ -69,16 +69,49 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
 
 
 def test_trigger_strategy_action_by_non_owner_address():
-    pass
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    strategy_worker_address = StrategyWorker[-1].address
+    strategy_vault = get_strategy_vault()
+    strategy_vault_address = strategy_vault.address
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
+        )
 
 
-def test_trigger_strategy_action_by_owner_address_for_zero_lp_balance_wallet():
-    pass
+def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_balance_wallet():
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    strategy_worker_address = StrategyWorker[-1].address
+    strategy_vault = get_strategy_vault()
+    strategy_vault_address = strategy_vault.address
+    # Act / Assert
+    strategy_vault.approve(
+        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet}
+    )
+    # dev_wallet withdrew the full vault lp balance in a previous test: "test_total_withdraw" and received some dust
+    # amount in "test_balance_of_creator_without_deposit_after_another_wallet_deposit".
+    # Thus, at this point, shoudn't have enough balance to cover total_buy_amount_in_deposit_asset
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            strategy_worker_address, strategy_vault_address, dev_wallet, {"from": dev_wallet}
+        )
 
 
 def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_allowance_wallet():
-    pass
-
-
-def test_trigger_strategy_action_by_owner_address_for_insufficient_deposit_token_allowance_wallet():
-    pass
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    strategy_worker_address = StrategyWorker[-1].address
+    strategy_vault = get_strategy_vault()
+    strategy_vault_address = strategy_vault.address
+    # Act / Assert
+    strategy_vault.approve(strategy_worker_address, 0, {"from": dev_wallet2})
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
+        )

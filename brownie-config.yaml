@@ -67,6 +67,7 @@ networks:
     controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
     worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
     treasury_address: "0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248"
+    token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON
     too_many_buy_token_addresses:
       [
         "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
@@ -82,11 +83,10 @@ networks:
         "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
       ]
 strategy-params:
-  buy_amounts: [10_000, 10_000] # Considering deposit token addr
+  buy_amounts: [5_000, 5_000] # Considering deposit token addr
   buy_frequency: 0 # Daily
   strategy_type: 0 # DCA
 protocol-params:
   treasury_fixed_fee_on_vault_creation: 100_000_000_000_000 # Ether amount (0.001)
   creator_percentage_fee_on_deposit: 25 #0.25%
   treasury_percentage_fee_on_balance_update: 25 #0.25%
-  token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON
