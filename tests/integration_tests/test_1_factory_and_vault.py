@@ -1,7 +1,7 @@
 import pytest
 from typing import List, Tuple
 from docs.abis import erc20_abi
-from helpers import get_account_from_pk
+from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault
 from scripts.deploy import (
     deploy_treasury_vault,
     deploy_controller,
@@ -13,12 +13,10 @@ from brownie import (
     AutomatedVaultsFactory,
     TreasuryVault,
     StrategyWorker,
-    accounts,
     network,
     config,
     Contract,
     exceptions,
-    web3,
 )
 
 # In order to run this tests a .env file must be created in the project's root containing 2 dev wallet private keys.
@@ -41,47 +39,11 @@ DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 10_000
 
 NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
 
-
-@pytest.fixture()
-def configs():
-    __check_network_is_mainnet_fork()
-    active_network_configs = config["networks"][network.show_active()]
-    protocol_params = config["protocol-params"]
-    strategy_params = config["strategy-params"]
-    return {
-        "dex_main_token_address": active_network_configs["dex_main_token_address"],
-        "dex_router_address": active_network_configs["dex_router_address"],
-        "dex_factory_address": active_network_configs["dex_factory_address"],
-        "deposit_token_address": active_network_configs["deposit_token_address"],
-        "buy_token_addresses": active_network_configs["buy_token_addresses"],
-        "vault_name": active_network_configs["vault_name"],
-        "vault_symbol": active_network_configs["vault_symbol"],
-        "treasury_fixed_fee_on_vault_creation": protocol_params["treasury_fixed_fee_on_vault_creation"],
-        "creator_percentage_fee_on_deposit": protocol_params["creator_percentage_fee_on_deposit"],
-        "treasury_percentage_fee_on_balance_update": protocol_params["treasury_percentage_fee_on_balance_update"],
-        "buy_amounts": strategy_params["buy_amounts"],
-        "buy_frequency": strategy_params["buy_frequency"],
-        "strategy_type": strategy_params["strategy_type"],
-        "token_not_paired_with_weth_address": active_network_configs["token_not_paired_with_weth_address"],
-        "too_many_buy_token_addresses": active_network_configs["too_many_buy_token_addresses"],
-    }
-
-
-@pytest.fixture()
-def deposit_token():
-    __check_network_is_mainnet_fork()
-    return Contract.from_abi(
-        "ERC20",
-        config["networks"][network.show_active()]["deposit_token_address"],
-        erc20_abi,
-    )
-
-
 ################################ Contract Actions ################################
 
 
 def test_create_new_vault(configs, deposit_token):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     verify_flag = config["networks"][network.show_active()]["verify"]
     wallet_initial_native_balance = dev_wallet.balance()
@@ -135,9 +97,9 @@ def test_create_new_vault(configs, deposit_token):
 
 
 def test_created_vault_init_params(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     (
         name,
         symbol,
@@ -165,9 +127,9 @@ def test_created_vault_init_params(configs):
 
 
 def test_created_vault_strategy_params(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     (
         buy_amounts,
         buy_frequency,
@@ -182,9 +144,9 @@ def test_created_vault_strategy_params(configs):
 
 
 def test_created_vault_buy_tokens(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     buy_token_addresses = strategy_vault.getBuyAssetAddresses()
     # Act
     # Assert
@@ -195,12 +157,13 @@ def test_created_vault_buy_tokens(configs):
 
 
 def test_deposit_owned_vault(deposit_token):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_vault_lp_supply = strategy_vault.totalSupply()
     initial_vault_depositors_list_length = strategy_vault.allDepositorsLength()
+    initial_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     # Act
     deposit_token.approve(
         strategy_vault.address,
@@ -212,6 +175,7 @@ def test_deposit_owned_vault(deposit_token):
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     depositor_address = strategy_vault.allDepositorAddresses(0)
+    final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     # Assert
     assert initial_wallet_lp_balance == 0
     assert initial_vault_lp_supply == 0
@@ -220,12 +184,14 @@ def test_deposit_owned_vault(deposit_token):
     assert final_vault_lp_supply == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 1
     assert depositor_address == dev_wallet
+    assert initial_vault_is_active == False
+    assert final_vault_is_active == True
 
 
 def test_deposit_not_owned_vault(configs, deposit_token):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     initial_vault_lp_supply = strategy_vault.totalSupply()
@@ -257,9 +223,9 @@ def test_deposit_not_owned_vault(configs, deposit_token):
 
 
 def test_partial_withdraw():
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_vault_lp_supply = strategy_vault.totalSupply()
     # Act
@@ -274,9 +240,9 @@ def test_partial_withdraw():
 
 
 def test_total_withdraw():
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_vault_lp_supply = strategy_vault.totalSupply()
     # Act
@@ -289,8 +255,8 @@ def test_total_withdraw():
 
 
 def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs, deposit_token):
-    __check_network_is_mainnet_fork()
-    # Arrange
+    check_network_is_mainnet_fork()
+    # Arrange/Act
     vaults_factory = AutomatedVaultsFactory[-1]
     (
         strategy_params,
@@ -301,13 +267,13 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
         strategy_params,
         {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
     )
-    strategy_vault = __get_strategy_vault(index=1)
+    strategy_vault = get_strategy_vault(index=1)
     initial_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     initial_vault_lp_supply = strategy_vault.totalSupply()
     initial_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     creator_percentage_fee_on_deposit = configs["creator_percentage_fee_on_deposit"] / 10_000
     creator_fee_on_deposit = creator_percentage_fee_on_deposit * DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
-    # Act
+    initial_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     deposit_token.approve(
         strategy_vault.address,
         DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
@@ -319,6 +285,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     first_depositor_address = strategy_vault.allDepositorAddresses(0)
+    final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     # Assert
     assert initial_vault_depositors_list_length == 0
     assert initial_wallet2_lp_balance == 0
@@ -329,12 +296,15 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
         final_wallet2_lp_balance == DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit
     )  # Ratio 1:1 lp token/ underlying token
     assert final_wallet_lp_balance == creator_fee_on_deposit  # Ratio 1:1 lp token/ underlying token
+    assert initial_vault_is_active == False
+    assert final_vault_is_active == True
 
 
 ################################ Contract Validations ################################
 
 
 def test_instantiate_strategy_from_non_factory_address(configs):
+    check_network_is_mainnet_fork()
     # Arrange
     verify_flag = config["networks"][network.show_active()]["verify"]
     strategy_params, _ = __get_default_strategy_and_init_vault_params(configs)
@@ -350,7 +320,7 @@ def test_instantiate_strategy_from_non_factory_address(configs):
 
 
 def test_create_strategy_with_insufficient_ether_balance(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -368,7 +338,7 @@ def test_create_strategy_with_insufficient_ether_balance(configs):
 
 
 def test_create_strategy_with_insufficient_ether_sent_as_fee(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -385,7 +355,7 @@ def test_create_strategy_with_insufficient_ether_sent_as_fee(configs):
 
 
 def test_create_strategy_with_null_deposit_asset_address(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -404,7 +374,7 @@ def test_create_strategy_with_null_deposit_asset_address(configs):
 
 
 def test_create_strategy_with_null_buy_asset_address(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -423,7 +393,7 @@ def test_create_strategy_with_null_buy_asset_address(configs):
 
 
 def test_buy_asset_list_contains_deposit_asset(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -442,7 +412,7 @@ def test_buy_asset_list_contains_deposit_asset(configs):
 
 
 def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -461,7 +431,7 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
 
 
 def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -480,7 +450,7 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
 
 
 def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -500,7 +470,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(config
 
 
 def test_create_strategy_with_to_many_buy_tokens(configs):
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
     (
@@ -519,20 +489,15 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
 
 
 def test_set_last_update_by_not_worker_address():
-    __check_network_is_mainnet_fork()
+    check_network_is_mainnet_fork()
     # Arrange
-    strategy_vault = __get_strategy_vault()
+    strategy_vault = get_strategy_vault()
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.setLastUpdate({"from": dev_wallet})
 
 
 ################################ Helper Functions ################################
-
-
-def __check_network_is_mainnet_fork():
-    if network.show_active() == "development" or "fork" not in network.show_active():
-        pytest.skip("Only for mainnet-fork testing!")
 
 
 def __get_default_strategy_and_init_vault_params(configs: dict) -> Tuple[Tuple, Tuple]:
@@ -550,11 +515,6 @@ def __get_default_strategy_and_init_vault_params(configs: dict) -> Tuple[Tuple, 
         worker_address,
     )
     return strategy_params, init_vault_from_factory_params
-
-
-def __get_strategy_vault(index: int = 0) -> AutomatedVaultERC4626:
-    created_strategy_vault_address = AutomatedVaultsFactory[-1].allVaults(index)
-    return AutomatedVaultERC4626.at(created_strategy_vault_address)
 
 
 def __get_vault_buy_token_decimals(strategy_vault: AutomatedVaultERC4626) -> List[str]:

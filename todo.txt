@@ -1,0 +1,5 @@
+TODO:
+      1 - Add validation for buy_address != deposit address (+ tests) - OK
+      2 - Add wallet addresses requirements for running this tests - OK
+      3 - Adapt contracts for weth as deposit token (swap path)
+      4 - Test set last update when testing worker action
