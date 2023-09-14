@@ -22,6 +22,7 @@ def configs() -> dict:
         "treasury_fixed_fee_on_vault_creation": protocol_params["treasury_fixed_fee_on_vault_creation"],
         "creator_percentage_fee_on_deposit": protocol_params["creator_percentage_fee_on_deposit"],
         "treasury_percentage_fee_on_balance_update": protocol_params["treasury_percentage_fee_on_balance_update"],
+        "max_slippage_perc": protocol_params["max_slippage_perc"],
         "buy_amounts": strategy_params["buy_amounts"],
         "buy_frequency": strategy_params["buy_frequency"],
         "strategy_type": strategy_params["strategy_type"],

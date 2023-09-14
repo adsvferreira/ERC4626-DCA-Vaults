@@ -23,7 +23,7 @@ contract StrategyWorker {
     using Math for uint256;
     using PercentageMath for uint256;
 
-    uint16 public constant MAX_SLIPPAGE_PERC = 5e2; // 5%
+    uint16 public constant MAX_SLIPPAGE_PERC = 5e1; // 0.5%
 
     address public dexRouter;
     address public dexMainToken;
@@ -195,8 +195,7 @@ contract StrategyWorker {
     ) internal returns (uint256 _amountOut) {
         IUniswapV2Router _dexRouterContract = IUniswapV2Router(dexRouter);
 
-        // Only checks for _buyAsset because _depositAsset is always a stable
-        if (_buyAsset != dexMainToken) {
+        if (_buyAsset != dexMainToken && _depositAsset != dexMainToken) {
             address[] memory _indirectPath = _getIndirectPath(
                 _depositAsset,
                 _buyAsset

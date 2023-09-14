@@ -363,6 +363,7 @@ def test_create_strategy_with_null_deposit_asset_address(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = NULL_ADDRESS
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -371,6 +372,7 @@ def test_create_strategy_with_null_deposit_asset_address(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[2] = old_deposit_asset_address
 
 
 def test_create_strategy_with_null_buy_asset_address(configs):
@@ -382,6 +384,7 @@ def test_create_strategy_with_null_buy_asset_address(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = NULL_ADDRESS
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -390,6 +393,7 @@ def test_create_strategy_with_null_buy_asset_address(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[3][0] = old_buy_asset_address
 
 
 def test_buy_asset_list_contains_deposit_asset(configs):
@@ -401,6 +405,7 @@ def test_buy_asset_list_contains_deposit_asset(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = init_vault_from_factory_params[2]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -409,6 +414,7 @@ def test_buy_asset_list_contains_deposit_asset(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[3][0] = old_buy_asset_address
 
 
 def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
@@ -420,6 +426,7 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = configs["token_not_paired_with_weth_address"]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -428,6 +435,7 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[3][0] = old_buy_asset_address
 
 
 def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
@@ -439,6 +447,7 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = configs["token_not_paired_with_weth_address"]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -447,6 +456,7 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[2] = old_deposit_asset_address
 
 
 def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(configs):
@@ -458,6 +468,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(config
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     strategy_params = list(strategy_params)
+    old_buy_amounts = strategy_params[0]
     strategy_params[0] = [strategy_params[0][1]]
     # Act / Assert
     assert len(strategy_params[0]) != len(init_vault_from_factory_params[3])
@@ -467,6 +478,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(config
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    strategy_params[0] = old_buy_amounts
 
 
 def test_create_strategy_with_to_many_buy_tokens(configs):
@@ -478,6 +490,7 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_buy_token_addresses = init_vault_from_factory_params[3]
     init_vault_from_factory_params[3] = configs["too_many_buy_token_addresses"]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
@@ -486,6 +499,7 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
+    init_vault_from_factory_params[3] = old_buy_token_addresses
 
 
 def test_set_last_update_by_not_worker_address():

@@ -1,7 +1,8 @@
 import pytest
 from math import ceil
-from brownie import StrategyWorker, Controller, TreasuryVault, exceptions
+from typing import List
 from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault
+from brownie import StrategyWorker, Controller, TreasuryVault, exceptions, Contract, config, network
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
@@ -32,6 +33,7 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
         total_buy_amount_in_deposit_asset * treasury_fee_on_balance_update_perc
     )
     initial_vault_last_update_timestamp = strategy_vault.lastUpdate()
+    min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router)
     # Act
     strategy_vault.approve(
         strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
@@ -62,7 +64,10 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     )
     assert initial_vault_last_update_timestamp == 0
     assert final_vault_last_update_timestamp == tx.timestamp
-    # Assert final_depositor_balances_of_buy_assets > dexRouter.amountOutMin
+    for i in range(strategy_vault.buyAssetsLength()):
+        assert (
+            final_depositor_balances_of_buy_assets[i] - initial_depositor_balances_of_buy_assets[i]
+        ) >= min_buy_assets_amounts_out[i] * (1 - (configs["max_slippage_perc"] / 10_000))
 
 
 ################################ Contract Validations ################################
@@ -115,3 +120,33 @@ def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_allowance_
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
+
+
+################################ Helper Functions ################################
+
+
+def __get_min_buy_assets_amounts_out(configs: dict, dex_router: Contract) -> List[int]:
+    return [
+        __get_min_amount_out(buy_token_address, buy_amount, configs, dex_router)
+        for buy_token_address, buy_amount in zip(
+            configs["buy_token_addresses"],
+            configs["buy_amounts"],
+        )
+    ]
+
+
+def __get_min_amount_out(buy_token_address: str, buy_amount: int, configs: dict, dex_router: Contract) -> int:
+    buy_amount_after_fee = __get_buy_amount_after_fee(buy_amount, configs["treasury_percentage_fee_on_balance_update"])
+    path = __get_path(buy_token_address, configs["deposit_token_address"], configs["dex_main_token_address"])
+    amounts_out = dex_router.getAmountsOut(buy_amount_after_fee, path)
+    return amounts_out[-1]
+
+
+def __get_buy_amount_after_fee(buy_amount: int, perc_fee: int) -> int:
+    return ceil(buy_amount * (1 - (perc_fee / 10_000)))
+
+
+def __get_path(buy_token_address: str, deposit_token_address: str, dex_main_token_address: str) -> List[str]:
+    if buy_token_address != dex_main_token_address and deposit_token_address != dex_main_token_address:
+        return [deposit_token_address, dex_main_token_address, buy_token_address]
+    return [deposit_token_address, buy_token_address]

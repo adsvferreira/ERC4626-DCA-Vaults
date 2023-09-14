@@ -141,13 +141,15 @@ contract AutomatedVaultsFactory {
                 address(0),
             "ZERO_ADDRESS"
         );
-        require(
-            uniswapV2Factory.getPair(
-                initMultiAssetVaultFactoryParams.depositAsset,
-                dexMainToken
-            ) != address(0),
-            "SWAP PATH BETWEEN DEPOSIT ASSET AND DEX MAIN TOKEN NOT FOUND"
-        );
+        if (initMultiAssetVaultFactoryParams.depositAsset != dexMainToken) {
+            require(
+                uniswapV2Factory.getPair(
+                    initMultiAssetVaultFactoryParams.depositAsset,
+                    dexMainToken
+                ) != address(0),
+                "SWAP PATH BETWEEN DEPOSIT ASSET AND DEX MAIN TOKEN NOT FOUND"
+            );
+        }
         require(
             this.allPairsExistForBuyAssets(
                 initMultiAssetVaultFactoryParams.depositAsset,

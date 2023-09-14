@@ -22,14 +22,15 @@ networks:
     dex_factory_address: "0xc35DADB65012eC5796536bD9864eD8773aBc74C4" # ARBITRUM Sushi
     dex_main_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
     deposit_token_address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" #USDC.e
-    # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" #USDT
-    # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" #ARB
+    # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" # USDT
+    # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" # ARB
+    # deposit_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
     buy_token_addresses: [
         "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
-        "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
-      ] # GMX + WETH
-    vault_name: "GMX/WETH DCA Vault"
-    vault_symbol: "GMX/WETH_DCA"
+        "0x912ce59144191c1204e64559fe8253a0e49e6548",
+      ] # GMX + ARB
+    vault_name: "GMX/ARB DCA Vault"
+    vault_symbol: "GMX/ARB_DCA"
     vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
     controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
     worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
@@ -54,15 +55,16 @@ networks:
     dex_router_address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # ARBITRUM Sushi
     dex_factory_address: "0xc35DADB65012eC5796536bD9864eD8773aBc74C4" # ARBITRUM Sushi
     dex_main_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
-    deposit_token_address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" #USDC.e
-    # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" #USDT
-    # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" #ARB
+    deposit_token_address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" # USDC.e
+    # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" # USDT
+    # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" # ARB
+    # deposit_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
     buy_token_addresses: [
         "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a",
-        "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
-      ] # GMX + WETH
-    vault_name: "GMX/WETH DCA Vault"
-    vault_symbol: "GMX/WETH_DCA"
+        "0x912ce59144191c1204e64559fe8253a0e49e6548",
+      ] # GMX + ARB
+    vault_name: "GMX/ARB DCA Vault"
+    vault_symbol: "GMX/ARB_DCA"
     vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
     controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
     worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
@@ -90,3 +92,4 @@ protocol-params:
   treasury_fixed_fee_on_vault_creation: 100_000_000_000_000 # Ether amount (0.001)
   creator_percentage_fee_on_deposit: 25 #0.25%
   treasury_percentage_fee_on_balance_update: 25 #0.25%
+  max_slippage_perc: 50 #0.5%
