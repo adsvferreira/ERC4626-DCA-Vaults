@@ -14,13 +14,13 @@ pragma solidity 0.8.21;
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
 import {PercentageMath} from "../libraries/math/percentageMath.sol";
-import {IAutomatedVaultERC4626} from "../interfaces/IAutomatedVaultERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC4626, IERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract AutomatedVaultERC4626 is ERC4626, IAutomatedVaultERC4626 {
+contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
     using Math for uint256;
     using PercentageMath for uint256;
     using SafeERC20 for IERC20;
@@ -94,7 +94,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVaultERC4626 {
     function deposit(
         uint256 assets,
         address receiver
-    ) public override(ERC4626, IERC4626) returns (uint256) {
+    ) public override(ERC4626) returns (uint256) {
         uint256 maxAssets = maxDeposit(receiver);
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
@@ -105,24 +105,24 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVaultERC4626 {
         return shares;
     }
 
-    function setLastUpdate() public onlyStrategyWorker {
+    function setLastUpdate() external onlyStrategyWorker {
         lastUpdate = block.timestamp;
     }
 
     function getInitMultiAssetVaultParams()
-        public
+        external
         view
         returns (ConfigTypes.InitMultiAssetVaultParams memory)
     {
         return initMultiAssetVaultParams;
     }
 
-    function getBuyAssetAddresses() public view returns (address[] memory) {
+    function getBuyAssetAddresses() external view returns (address[] memory) {
         return buyAssetAddresses;
     }
 
     function getStrategyParams()
-        public
+        external
         view
         returns (ConfigTypes.StrategyParams memory)
     {

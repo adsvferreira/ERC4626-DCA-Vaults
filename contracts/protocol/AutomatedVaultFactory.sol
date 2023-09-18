@@ -11,9 +11,10 @@ pragma solidity 0.8.21;
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
-import {AutomatedVaultERC4626, IAutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
+import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
+import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
-contract AutomatedVaultsFactory {
+contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     event VaultCreated(
         address indexed creator,
         address indexed depositAsset,
@@ -52,7 +53,7 @@ contract AutomatedVaultsFactory {
         uniswapV2Factory = IUniswapV2Factory(_uniswapV2Factory);
     }
 
-    function allVaultsLength() external view returns (uint) {
+    function allVaultsLength() external view returns (uint256) {
         return allVaults.length;
     }
 
@@ -82,7 +83,7 @@ contract AutomatedVaultsFactory {
             );
 
         // CREATE NEW STRATEGY VAULT
-        IAutomatedVaultERC4626 newVault = new AutomatedVaultERC4626(
+        AutomatedVaultERC4626 newVault = new AutomatedVaultERC4626(
             initMultiAssetVaultParams,
             strategyParams
         );

@@ -10,15 +10,16 @@ pragma solidity 0.8.21;
 */
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {TreasuryVault} from "./TreasuryVault.sol";
-import {AutomatedVaultERC4626, IAutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {PercentageMath} from "../libraries/math/percentageMath.sol";
-import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
+import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
+import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
+import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract StrategyWorker {
+contract StrategyWorker is IStrategyWorker {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using PercentageMath for uint256;
@@ -106,7 +107,7 @@ contract StrategyWorker {
             _buyAmountsAfterFee
         );
 
-        TreasuryVault(_protocolTreasuryAddress).depositERC20(
+        ITreasuryVault(_protocolTreasuryAddress).depositERC20(
             _totalFee,
             _depositAsset
         );
