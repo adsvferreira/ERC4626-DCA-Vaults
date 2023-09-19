@@ -30,7 +30,6 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 10;
 
     address[] public buyAssetAddresses;
-    uint8[] public buyAssetsDecimals;
     uint256 public buyAssetsLength;
     uint256 public lastUpdate;
     /**
@@ -40,6 +39,14 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
      */
     address[] public allDepositorAddresses;
     uint256 public allDepositorsLength;
+
+    /**
+     * @notice Periodic buy amounts are calculated as a percentage of the first deposit.
+     * A user's first deposit is detected when their vault balance is zero.
+     * To adjust the absolute amounts swapped periodically, withdraw the entire balance and deposit a different amount.
+     */
+    mapping(address depositor => uint256) private _initialDepositBalances;
+    mapping(address depositor => uint256[]) private _depositorBuyAmounts;
 
     event CreatorFeeTransfered(
         address indexed vault,
@@ -73,12 +80,11 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         require(msg.sender == _initMultiAssetVaultParams.factory, "FORBIDDEN");
         _validateInputs(
             _initMultiAssetVaultParams.buyAssets,
-            _strategyParams.buyAmounts
+            _strategyParams.buyPercentages
         );
         initMultiAssetVaultParams = _initMultiAssetVaultParams;
         _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
-        _setBuyAssetsDecimals(_initMultiAssetVaultParams.buyAssets);
         initMultiAssetVaultParams.isActive = false;
     }
 
@@ -129,9 +135,21 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         return strategyParams;
     }
 
+    function getInitialDepositBalance(
+        address depositor
+    ) public view virtual returns (uint256) {
+        return _initialDepositBalances[depositor];
+    }
+
+    function getDepositorBuyAmounts(
+        address depositor
+    ) public view virtual returns (uint256[] memory) {
+        return _depositorBuyAmounts[depositor];
+    }
+
     function _validateInputs(
         IERC20[] memory buyAssets,
-        uint256[] memory buyAmounts
+        uint256[] memory buyPercentages
     ) private pure {
         // Check if max number of deposited assets was not exceeded
         require(
@@ -140,25 +158,9 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         );
         // Check if both arrays have the same length
         require(
-            buyAmounts.length == buyAssets.length,
-            "buyAmounts and buyAssets arrays must have the same length"
+            buyPercentages.length == buyAssets.length,
+            "buyPercentages and buyAssets arrays must have the same length"
         );
-    }
-
-    function _setBuyAssetsDecimals(IERC20[] memory buyAssets) private {
-        for (uint8 i = 0; i < buyAssets.length; i++) {
-            buyAssetsDecimals.push(_getAssetDecimals(buyAssets[i]));
-        }
-    }
-
-    function _getAssetDecimals(
-        IERC20 depositAsset
-    ) private view returns (uint8) {
-        (bool success, uint8 assetDecimals) = _originalTryGetAssetDecimals(
-            depositAsset
-        );
-        uint8 finalAssetDecimals = success ? assetDecimals : 18;
-        return finalAssetDecimals;
     }
 
     function _populateBuyAssetsData(
@@ -228,6 +230,8 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             if (balanceOf(receiver) == 0) {
                 allDepositorAddresses.push(receiver);
                 allDepositorsLength += 1;
+                _initialDepositBalances[receiver] = shares;
+                _updateDepositorBuyAmounts(receiver);
             }
             _mint(receiver, shares);
         } else {
@@ -250,18 +254,33 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             if (balanceOf(receiver) == 0) {
                 allDepositorAddresses.push(receiver);
                 allDepositorsLength += 1;
+                _initialDepositBalances[receiver] = shares;
+                _updateDepositorBuyAmounts(receiver);
             }
             _mint(receiver, depositorShares);
 
             if (balanceOf(initMultiAssetVaultParams.creator) == 0) {
                 allDepositorAddresses.push(initMultiAssetVaultParams.creator);
                 allDepositorsLength += 1;
+                _initialDepositBalances[receiver] = shares;
+                _updateDepositorBuyAmounts(initMultiAssetVaultParams.creator);
             }
             _mint(initMultiAssetVaultParams.creator, creatorShares);
         }
         // Activates vault after 1st deposit
         if (initMultiAssetVaultParams.isActive == false) {
             initMultiAssetVaultParams.isActive = true;
+        }
+    }
+
+    function _updateDepositorBuyAmounts(address depositor) internal {
+        uint256 initialDepositBalance = _initialDepositBalances[depositor];
+        for (uint256 i = 0; i < buyAssetsLength; i++) {
+            _depositorBuyAmounts[depositor].push(
+                initialDepositBalance.percentMul(
+                    strategyParams.buyPercentages[i]
+                )
+            );
         }
     }
 }

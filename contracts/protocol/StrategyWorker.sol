@@ -67,7 +67,7 @@ contract StrategyWorker is IStrategyWorker {
             address _depositAsset,
             address[] memory _buyAssets,
             uint256[] memory _buyAmounts
-        ) = _getSwapParams(_strategyVault);
+        ) = _getSwapParams(_strategyVault, _depositorAddress);
 
         ConfigTypes.InitMultiAssetVaultParams
             memory initMultiAssetVaultParams = _strategyVault
@@ -124,7 +124,8 @@ contract StrategyWorker is IStrategyWorker {
     }
 
     function _getSwapParams(
-        AutomatedVaultERC4626 _strategyVault
+        AutomatedVaultERC4626 _strategyVault,
+        address _depositorAddress
     )
         private
         view
@@ -139,7 +140,7 @@ contract StrategyWorker is IStrategyWorker {
                 .getInitMultiAssetVaultParams();
         _depositAsset = address(_initMultiAssetVaultParams.depositAsset);
         _buyAssets = _strategyVault.getBuyAssetAddresses();
-        _buyAmounts = _strategyVault.getStrategyParams().buyAmounts;
+        _buyAmounts = _strategyVault.getDepositorBuyAmounts(_depositorAddress);
     }
 
     function _calculateAmountsAfterFee(

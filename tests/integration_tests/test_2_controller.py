@@ -25,15 +25,16 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     initial_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet2) for buy_token in buy_tokens]
     initial_vault_lp_total_suppy = strategy_vault.totalSupply()
     initial_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
-    total_buy_amount_in_deposit_asset = sum([buy_amount for buy_amount in configs["buy_amounts"]])
+    wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    total_wallet_buy_amount_in_deposit_asset = sum(wallet_buy_amounts)
     treasury_fee_on_balance_update_perc = (
         configs["creator_percentage_fee_on_deposit"] + 0.5
     ) / 10_000  # library PercentageMath - Operations are rounded half up
     treasury_fee_on_balance_update_in_deposit_asset = ceil(
-        total_buy_amount_in_deposit_asset * treasury_fee_on_balance_update_perc
+        total_wallet_buy_amount_in_deposit_asset * treasury_fee_on_balance_update_perc
     )
     initial_vault_last_update_timestamp = strategy_vault.lastUpdate()
-    min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router)
+    min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router, wallet_buy_amounts)
     # Act
     strategy_vault.approve(
         strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
@@ -50,13 +51,14 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     # Assert
     assert (
         initial_vault_balance_of_deposit_asset - final_vault_balance_of_deposit_asset
-        == total_buy_amount_in_deposit_asset
+        == total_wallet_buy_amount_in_deposit_asset
     )
     assert (
-        initial_depositor_vault_lp_balance - final_depositor_vault_lp_balance == total_buy_amount_in_deposit_asset
+        initial_depositor_vault_lp_balance - final_depositor_vault_lp_balance
+        == total_wallet_buy_amount_in_deposit_asset
     )  # Ratio 1:1 lp token/ underlying token
     assert (
-        initial_vault_lp_total_suppy - final_vault_lp_total_suppy == total_buy_amount_in_deposit_asset
+        initial_vault_lp_total_suppy - final_vault_lp_total_suppy == total_wallet_buy_amount_in_deposit_asset
     )  # Ratio 1:1 lp token/ underlying token
     assert (
         final_treasury_vault_balance_of_deposit_asset - initial_treasury_vault_balance_of_deposit_asset
@@ -125,12 +127,12 @@ def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_allowance_
 ################################ Helper Functions ################################
 
 
-def __get_min_buy_assets_amounts_out(configs: dict, dex_router: Contract) -> List[int]:
+def __get_min_buy_assets_amounts_out(configs: dict, dex_router: Contract, wallet_buy_amounts: List[int]) -> List[int]:
     return [
         __get_min_amount_out(buy_token_address, buy_amount, configs, dex_router)
         for buy_token_address, buy_amount in zip(
             configs["buy_token_addresses"],
-            configs["buy_amounts"],
+            wallet_buy_amounts,
         )
     ]
 

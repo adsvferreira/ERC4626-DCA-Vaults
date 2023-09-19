@@ -85,7 +85,7 @@ networks:
         "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
       ]
 strategy-params:
-  buy_amounts: [5_000, 5_000] # Considering deposit token addr
+  buy_percentages: [500, 500] #5% 5%
   buy_frequency: 0 # Daily
   strategy_type: 0 # DCA
 protocol-params:

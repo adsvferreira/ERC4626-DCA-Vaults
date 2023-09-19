@@ -10,6 +10,7 @@ pragma solidity 0.8.21;
 
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
+import {PercentageMath} from "../libraries/math/percentageMath.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
@@ -20,7 +21,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         address indexed depositAsset,
         address[] buyAssets,
         address vaultAddress,
-        uint256[] buyAmounts,
+        uint256[] buyPercentages,
         Enums.BuyFrequency buyFrequency,
         Enums.StrategyType strategyType
     );
@@ -67,7 +68,10 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             "ETHER SENT MUST COVER VAULT CREATION FEE"
         );
 
-        _validateCreateVaultInputs(initMultiAssetVaultFactoryParams);
+        _validateCreateVaultInputs(
+            initMultiAssetVaultFactoryParams,
+            strategyParams.buyPercentages
+        );
 
         // SEND CREATION FEE TO PROTOCOL TREASURY
         (bool success, ) = treasury.call{value: msg.value}("");
@@ -95,7 +99,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             address(initMultiAssetVaultParams.depositAsset),
             initMultiAssetVaultFactoryParams.buyAssets,
             newVaultAddress,
-            strategyParams.buyAmounts,
+            strategyParams.buyPercentages,
             strategyParams.buyFrequency,
             strategyParams.strategyType
         );
@@ -135,7 +139,8 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function _validateCreateVaultInputs(
         ConfigTypes.InitMultiAssetVaultFactoryParams
-            memory initMultiAssetVaultFactoryParams
+            memory initMultiAssetVaultFactoryParams,
+        uint256[] memory buyPercentages
     ) private view {
         require(
             address(initMultiAssetVaultFactoryParams.depositAsset) !=
@@ -157,6 +162,11 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 initMultiAssetVaultFactoryParams.buyAssets
             ),
             "SWAP PATH NOT FOUND FOR AT LEAST 1 BUY ASSET"
+        );
+        require(
+            _buyPercentagesSum(buyPercentages) <=
+                PercentageMath.PERCENTAGE_FACTOR,
+            "BUY PERCENTAGES SUM IS GT 100"
         );
     }
 
@@ -210,5 +220,14 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         );
         // 2 vaults can't the same address, tx would revert at vault instantiation
         getUserVaults[creator].push(newVault);
+    }
+
+    function _buyPercentagesSum(
+        uint256[] memory buyPercentages
+    ) private pure returns (uint256 buyPercentagesSum) {
+        for (uint256 i = 0; i < buyPercentages.length; i++) {
+            require(buyPercentages[i] > 0, "Buy percentage must be gt zero");
+            buyPercentagesSum += buyPercentages[i];
+        }
     }
 }

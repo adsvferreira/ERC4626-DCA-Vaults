@@ -1,3 +1,4 @@
+from typing import List
 from brownie import web3
 from brownie import config, AutomatedVaultsFactory, network
 
@@ -10,7 +11,7 @@ class EventListener:
         self.block_number = web3.eth.blockNumber
 
     # returns the new vaults addresses
-    def event_listener_vaults_update(self) -> list[str]:
+    def event_listener_vaults_update(self) -> List[str]:
         event_filter = vaults_factory_contract.events.VaultCreated.createFilter(
             fromBlock=self.block_number
         )

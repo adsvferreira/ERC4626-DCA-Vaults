@@ -131,14 +131,14 @@ def test_created_vault_strategy_params(configs):
     # Arrange
     strategy_vault = get_strategy_vault()
     (
-        buy_amounts,
+        buy_percentages,
         buy_frequency,
         strategy_type,
-        strategy_worker,
+        _,
     ) = strategy_vault.getStrategyParams()
     # Act
     # Assert
-    assert buy_amounts == configs["buy_amounts"]
+    assert buy_percentages == configs["buy_percentages"]
     assert buy_frequency == configs["buy_frequency"]
     assert strategy_type == configs["strategy_type"]
 
@@ -152,7 +152,6 @@ def test_created_vault_buy_tokens(configs):
     # Assert
     assert strategy_vault.buyAssetsLength() == len(configs["buy_token_addresses"])
     assert buy_token_addresses == configs["buy_token_addresses"]
-    assert __get_tokens_decimals(buy_token_addresses) == __get_vault_buy_token_decimals(strategy_vault)
     assert strategy_vault.asset() == configs["deposit_token_address"]
 
 
@@ -459,7 +458,7 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
     init_vault_from_factory_params[2] = old_deposit_asset_address
 
 
-def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(configs):
+def test_create_strategy_with_different_length_for_buy_tokens_and_percentages(configs):
     check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
@@ -468,7 +467,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(config
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     strategy_params = list(strategy_params)
-    old_buy_amounts = strategy_params[0]
+    old_buy_percentages = strategy_params[0]
     strategy_params[0] = [strategy_params[0][1]]
     # Act / Assert
     assert len(strategy_params[0]) != len(init_vault_from_factory_params[3])
@@ -478,7 +477,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_amounts(config
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
-    strategy_params[0] = old_buy_amounts
+    strategy_params[0] = old_buy_percentages
 
 
 def test_create_strategy_with_to_many_buy_tokens(configs):
@@ -502,6 +501,69 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
     init_vault_from_factory_params[3] = old_buy_token_addresses
 
 
+def test_create_strategy_with_sum_of_buy_percentages_gt_100(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    strategy_params = list(strategy_params)
+    old_buy_token_percentages = strategy_params[0]
+    strategy_params[0] = [10_000, 10_000]  # 100%, 100%
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    strategy_params[0] = old_buy_token_percentages
+
+
+def test_create_strategy_with_buy_percentage_eq_zero(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    strategy_params = list(strategy_params)
+    old_buy_token_percentages = strategy_params[0]
+    strategy_params[0] = [0, 10_000]  # 100%, 100%
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    strategy_params[0] = old_buy_token_percentages
+
+
+def test_create_strategy_with_buy_percentage_lt_zero(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    strategy_params = list(strategy_params)
+    old_buy_token_percentages = strategy_params[0]
+    strategy_params[0] = [-1, 10_000]  # 100%, 100%
+    # Act / Assert
+    with pytest.raises(OverflowError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    strategy_params[0] = old_buy_token_percentages
+
+
 def test_set_last_update_by_not_worker_address():
     check_network_is_mainnet_fork()
     # Arrange
@@ -523,20 +585,12 @@ def __get_default_strategy_and_init_vault_params(configs: dict) -> Tuple[Tuple, 
         configs["buy_token_addresses"],
     )
     strategy_params = (
-        configs["buy_amounts"],
+        configs["buy_percentages"],
         configs["buy_frequency"],
         configs["strategy_type"],
         worker_address,
     )
     return strategy_params, init_vault_from_factory_params
-
-
-def __get_vault_buy_token_decimals(strategy_vault: AutomatedVaultERC4626) -> List[str]:
-    return [strategy_vault.buyAssetsDecimals(i) for i in range(strategy_vault.buyAssetsLength())]
-
-
-def __get_tokens_decimals(token_addresses: List[str]) -> int:
-    return [Contract.from_abi("ERC20", token_address, erc20_abi).decimals() for token_address in token_addresses]
 
 
 def __get_init_vault_params(configs: dict, wallet_address: str) -> tuple:
@@ -552,3 +606,6 @@ def __get_init_vault_params(configs: dict, wallet_address: str) -> tuple:
         configs["creator_percentage_fee_on_deposit"],
         configs["treasury_percentage_fee_on_balance_update"],
     )
+
+
+# TODO: Add test for sum buy percentages > 0
