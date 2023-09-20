@@ -21,4 +21,6 @@ interface IAutomatedVaultsFactory {
         address depositAsset,
         address buyAsset
     ) external view returns (bool);
+
+    function getVaultAddress(uint256 i) external view returns (address);
 }

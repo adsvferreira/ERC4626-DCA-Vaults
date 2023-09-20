@@ -90,6 +90,7 @@ contract StrategyWorker is IStrategyWorker {
         uint256 totalBuyAmount = amountToWithdraw - totalFee;
 
         strategyVault.setLastUpdate();
+        strategyVault.setLastUpdatePerDepositor(depositorAddress);
 
         strategyVault.withdraw(
             amountToWithdraw,

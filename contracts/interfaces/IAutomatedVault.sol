@@ -6,6 +6,8 @@ import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 interface IAutomatedVault {
     function setLastUpdate() external;
 
+    function setLastUpdatePerDepositor(address depositor) external;
+
     function getInitMultiAssetVaultParams()
         external
         view
@@ -17,4 +19,16 @@ interface IAutomatedVault {
         external
         view
         returns (ConfigTypes.StrategyParams memory);
+
+    function getInitialDepositBalance(
+        address depositor
+    ) external view returns (uint256);
+
+    function getDepositorBuyAmounts(
+        address depositor
+    ) external view returns (uint256[] memory);
+
+    function getUpdateFrequencyTimestamp() external view returns (uint256);
+
+    function lastUpdateOf(address depositor) external view returns (uint256);
 }

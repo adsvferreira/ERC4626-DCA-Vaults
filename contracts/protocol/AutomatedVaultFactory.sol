@@ -33,7 +33,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     uint256 public creatorPercentageFeeOnDeposit; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
     uint256 public treasuryPercentageFeeOnBalanceUpdate; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
 
-    address[] public allVaults;
+    address[] private _allVaults;
     mapping(address => address[]) public getUserVaults;
 
     IUniswapV2Factory uniswapV2Factory;
@@ -55,7 +55,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     }
 
     function allVaultsLength() external view returns (uint256) {
-        return allVaults.length;
+        return _allVaults.length;
     }
 
     function createVault(
@@ -92,7 +92,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams
         );
         newVaultAddress = address(newVault);
-        allVaults.push(newVaultAddress);
+        _allVaults.push(newVaultAddress);
         _addUserVault(initMultiAssetVaultParams.creator, newVaultAddress);
         emit VaultCreated(
             initMultiAssetVaultParams.creator,
@@ -134,6 +134,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             return true;
         }
         return false;
+    }
+
+    function getVaultAddress(
+        uint256 i
+    ) external view virtual returns (address) {
+        return _allVaults[i];
     }
 
     function _validateCreateVaultInputs(

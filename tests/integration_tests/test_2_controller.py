@@ -33,6 +33,7 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
         ]
     )
     initial_vault_last_update_timestamp = strategy_vault.lastUpdate()
+    initial_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet2)
     min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router, wallet_buy_amounts)
     # Act
     strategy_vault.approve(
@@ -47,6 +48,7 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     final_vault_lp_total_suppy = strategy_vault.totalSupply()
     final_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
     final_vault_last_update_timestamp = strategy_vault.lastUpdate()
+    final_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet2)
     # Assert
     assert (
         initial_vault_balance_of_deposit_asset - final_vault_balance_of_deposit_asset
@@ -64,7 +66,9 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
         == treasury_fee_on_balance_update_in_deposit_asset
     )
     assert initial_vault_last_update_timestamp == 0
+    assert initial_wallet_vault_last_updated_timestamp == 0
     assert final_vault_last_update_timestamp == tx.timestamp
+    assert final_wallet_vault_last_updated_timestamp == tx.timestamp
     for i in range(strategy_vault.buyAssetsLength()):
         assert (
             final_depositor_balances_of_buy_assets[i] - initial_depositor_balances_of_buy_assets[i]

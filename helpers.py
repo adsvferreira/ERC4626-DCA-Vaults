@@ -13,7 +13,7 @@ def check_network_is_mainnet_fork():
 
 
 def get_strategy_vault(index: int = 0) -> AutomatedVaultERC4626:
-    created_strategy_vault_address = AutomatedVaultsFactory[-1].allVaults(index)
+    created_strategy_vault_address = AutomatedVaultsFactory[-1].getVaultAddress(index)
     return AutomatedVaultERC4626.at(created_strategy_vault_address)
 
 
