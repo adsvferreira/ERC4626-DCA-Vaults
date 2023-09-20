@@ -24,10 +24,11 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
     using Math for uint256;
     using PercentageMath for uint256;
     using SafeERC20 for IERC20;
-    ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
-    ConfigTypes.StrategyParams public strategyParams;
 
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 10;
+
+    ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
+    ConfigTypes.StrategyParams public strategyParams;
 
     address[] public buyAssetAddresses;
     uint256 public buyAssetsLength;
@@ -254,7 +255,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             if (balanceOf(receiver) == 0) {
                 allDepositorAddresses.push(receiver);
                 allDepositorsLength += 1;
-                _initialDepositBalances[receiver] = shares;
+                _initialDepositBalances[receiver] = depositorShares;
                 _updateDepositorBuyAmounts(receiver);
             }
             _mint(receiver, depositorShares);
@@ -262,7 +263,9 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             if (balanceOf(initMultiAssetVaultParams.creator) == 0) {
                 allDepositorAddresses.push(initMultiAssetVaultParams.creator);
                 allDepositorsLength += 1;
-                _initialDepositBalances[receiver] = shares;
+                _initialDepositBalances[
+                    initMultiAssetVaultParams.creator
+                ] = creatorShares;
                 _updateDepositorBuyAmounts(initMultiAssetVaultParams.creator);
             }
             _mint(initMultiAssetVaultParams.creator, creatorShares);

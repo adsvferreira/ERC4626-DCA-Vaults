@@ -1,7 +1,6 @@
 import pytest
-from typing import List, Tuple
-from docs.abis import erc20_abi
-from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault
+from typing import Tuple
+from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault, perc_mul_contracts_simulate
 from scripts.deploy import (
     deploy_treasury_vault,
     deploy_controller,
@@ -155,7 +154,7 @@ def test_created_vault_buy_tokens(configs):
     assert strategy_vault.asset() == configs["deposit_token_address"]
 
 
-def test_deposit_owned_vault(deposit_token):
+def test_deposit_owned_vault(configs, deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_vault = get_strategy_vault()
@@ -163,6 +162,12 @@ def test_deposit_owned_vault(deposit_token):
     initial_vault_lp_supply = strategy_vault.totalSupply()
     initial_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     initial_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
+    initial_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    initial_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
+    expected_final_wallet_buy_amounts = [
+        perc_mul_contracts_simulate(DEV_WALLET_DEPOSIT_TOKEN_AMOUNT, buy_perc)
+        for buy_perc in configs["buy_percentages"]
+    ]
     # Act
     deposit_token.approve(
         strategy_vault.address,
@@ -175,16 +180,22 @@ def test_deposit_owned_vault(deposit_token):
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     depositor_address = strategy_vault.allDepositorAddresses(0)
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
+    final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     # Assert
     assert initial_wallet_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
+    assert initial_initial_wallet_deposit_balance == 0
+    assert initial_wallet_buy_amounts == []
     assert final_wallet_lp_balance == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT  # Ratio 1:1 lp token/ underlying token
     assert final_vault_lp_supply == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 1
     assert depositor_address == dev_wallet
     assert initial_vault_is_active == False
     assert final_vault_is_active == True
+    assert final_initial_wallet_deposit_balance == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
+    assert final_wallet_buy_amounts == expected_final_wallet_buy_amounts
 
 
 def test_deposit_not_owned_vault(configs, deposit_token):
@@ -194,8 +205,17 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     initial_vault_lp_supply = strategy_vault.totalSupply()
-    creator_percentage_fee_on_deposit = configs["creator_percentage_fee_on_deposit"] / 10_000
-    creator_fee_on_deposit = creator_percentage_fee_on_deposit * DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
+    initial_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    initial_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
+    initial_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    initial_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    creator_fee_on_deposit = perc_mul_contracts_simulate(
+        DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, configs["creator_percentage_fee_on_deposit"]
+    )
+    expected_final_wallet2_buy_amounts = [
+        perc_mul_contracts_simulate(DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit, buy_perc)
+        for buy_perc in configs["buy_percentages"]
+    ]
     # Act
     deposit_token.approve(
         strategy_vault.address,
@@ -208,8 +228,14 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     second_depositor_address = strategy_vault.allDepositorAddresses(1)
+    final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
+    final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     # Assert
     assert initial_wallet2_lp_balance == 0
+    assert initial_initial_wallet2_deposit_balance == 0
+    assert initial_wallet2_buy_amounts == []
     assert final_vault_lp_supply == initial_vault_lp_supply + DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 2
     assert second_depositor_address == dev_wallet2
@@ -219,6 +245,10 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     assert (
         final_wallet_lp_balance == initial_wallet_lp_balance + creator_fee_on_deposit
     )  # Ratio 1:1 lp token/ underlying token
+    assert initial_initial_wallet_deposit_balance == final_initial_wallet_deposit_balance
+    assert initial_wallet_buy_amounts == final_wallet_buy_amounts
+    assert final_initial_wallet2_deposit_balance == DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit
+    assert final_wallet2_buy_amounts == expected_final_wallet2_buy_amounts
 
 
 def test_partial_withdraw():
@@ -270,9 +300,21 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     initial_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     initial_vault_lp_supply = strategy_vault.totalSupply()
     initial_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    creator_percentage_fee_on_deposit = configs["creator_percentage_fee_on_deposit"] / 10_000
-    creator_fee_on_deposit = creator_percentage_fee_on_deposit * DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
+    creator_fee_on_deposit = perc_mul_contracts_simulate(
+        DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, configs["creator_percentage_fee_on_deposit"]
+    )
     initial_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
+    initial_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    initial_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
+    initial_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    initial_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    expected_final_wallet_buy_amounts = [
+        perc_mul_contracts_simulate(creator_fee_on_deposit, buy_perc) for buy_perc in configs["buy_percentages"]
+    ]
+    expected_final_wallet2_buy_amounts = [
+        perc_mul_contracts_simulate(DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit, buy_perc)
+        for buy_perc in configs["buy_percentages"]
+    ]
     deposit_token.approve(
         strategy_vault.address,
         DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
@@ -285,9 +327,17 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     first_depositor_address = strategy_vault.allDepositorAddresses(0)
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
+    final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
+    final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
+    final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     # Assert
     assert initial_vault_depositors_list_length == 0
     assert initial_wallet2_lp_balance == 0
+    assert initial_initial_wallet_deposit_balance == 0
+    assert initial_initial_wallet2_deposit_balance == 0
+    assert initial_wallet_buy_amounts == []
+    assert initial_wallet2_buy_amounts == []
     assert final_vault_lp_supply == initial_vault_lp_supply + DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 2  # Depositor + creator that received fee as lp token
     assert first_depositor_address == dev_wallet2
@@ -297,6 +347,10 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     assert final_wallet_lp_balance == creator_fee_on_deposit  # Ratio 1:1 lp token/ underlying token
     assert initial_vault_is_active == False
     assert final_vault_is_active == True
+    assert final_initial_wallet2_deposit_balance == DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit
+    assert final_wallet2_buy_amounts == expected_final_wallet2_buy_amounts
+    assert final_initial_wallet_deposit_balance == creator_fee_on_deposit
+    assert final_wallet_buy_amounts == expected_final_wallet_buy_amounts
 
 
 ################################ Contract Validations ################################

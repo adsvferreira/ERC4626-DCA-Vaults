@@ -1,8 +1,7 @@
 import pytest
-from math import ceil
 from typing import List
-from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault
-from brownie import StrategyWorker, Controller, TreasuryVault, exceptions, Contract, config, network
+from brownie import StrategyWorker, Controller, TreasuryVault, exceptions, Contract
+from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault, perc_mul_contracts_simulate
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
@@ -27,11 +26,11 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     initial_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
     wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     total_wallet_buy_amount_in_deposit_asset = sum(wallet_buy_amounts)
-    treasury_fee_on_balance_update_perc = (
-        configs["creator_percentage_fee_on_deposit"] + 0.5
-    ) / 10_000  # library PercentageMath - Operations are rounded half up
-    treasury_fee_on_balance_update_in_deposit_asset = ceil(
-        total_wallet_buy_amount_in_deposit_asset * treasury_fee_on_balance_update_perc
+    treasury_fee_on_balance_update_in_deposit_asset = sum(
+        [
+            perc_mul_contracts_simulate(wallet_buy_amount, configs["creator_percentage_fee_on_deposit"])
+            for wallet_buy_amount in wallet_buy_amounts
+        ]
     )
     initial_vault_last_update_timestamp = strategy_vault.lastUpdate()
     min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router, wallet_buy_amounts)
@@ -145,7 +144,8 @@ def __get_min_amount_out(buy_token_address: str, buy_amount: int, configs: dict,
 
 
 def __get_buy_amount_after_fee(buy_amount: int, perc_fee: int) -> int:
-    return ceil(buy_amount * (1 - (perc_fee / 10_000)))
+    one_hunderd_percent_minus_perc_fee = 10_000 - perc_fee
+    return perc_mul_contracts_simulate(buy_amount, one_hunderd_percent_minus_perc_fee)
 
 
 def __get_path(buy_token_address: str, deposit_token_address: str, dex_main_token_address: str) -> List[str]:

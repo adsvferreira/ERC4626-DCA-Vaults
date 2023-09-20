@@ -1,4 +1,5 @@
 import pytest
+from math import floor
 from brownie import AutomatedVaultERC4626, AutomatedVaultsFactory, accounts, config, network
 
 
@@ -14,3 +15,8 @@ def check_network_is_mainnet_fork():
 def get_strategy_vault(index: int = 0) -> AutomatedVaultERC4626:
     created_strategy_vault_address = AutomatedVaultsFactory[-1].allVaults(index)
     return AutomatedVaultERC4626.at(created_strategy_vault_address)
+
+
+def perc_mul_contracts_simulate(value: int, percentage: int) -> int:
+    # library PercentageMath - Operations are rounded half up -> + 5_000
+    return floor((value * percentage + 5_000) / 10_000)
