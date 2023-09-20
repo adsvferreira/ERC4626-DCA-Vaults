@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 interface IController {
     function triggerStrategyAction(
-        address _strategyWorkerAddress,
-        address _strategyVaultAddress,
-        address _depositorAddress
+        address strategyWorkerAddress,
+        address strategyVaultAddress,
+        address depositorAddress
     ) external;
 }

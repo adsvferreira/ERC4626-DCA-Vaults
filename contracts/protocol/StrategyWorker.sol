@@ -56,195 +56,195 @@ contract StrategyWorker is IStrategyWorker {
     }
 
     function executeStrategyAction(
-        address _strategyVaultAddress,
-        address _depositorAddress
+        address strategyVaultAddress,
+        address depositorAddress
     ) external onlyController {
-        AutomatedVaultERC4626 _strategyVault = AutomatedVaultERC4626(
-            _strategyVaultAddress
+        AutomatedVaultERC4626 strategyVault = AutomatedVaultERC4626(
+            strategyVaultAddress
         );
 
         (
-            address _depositAsset,
-            address[] memory _buyAssets,
-            uint256[] memory _buyAmounts
-        ) = _getSwapParams(_strategyVault, _depositorAddress);
+            address depositAsset,
+            address[] memory buyAssets,
+            uint256[] memory buyAmounts
+        ) = _getSwapParams(strategyVault, depositorAddress);
 
         ConfigTypes.InitMultiAssetVaultParams
-            memory initMultiAssetVaultParams = _strategyVault
+            memory initMultiAssetVaultParams = strategyVault
                 .getInitMultiAssetVaultParams();
 
-        uint256 _actionFeePercentage = initMultiAssetVaultParams
+        uint256 actionFeePercentage = initMultiAssetVaultParams
             .treasuryPercentageFeeOnBalanceUpdate;
-        address payable _protocolTreasuryAddress = initMultiAssetVaultParams
+        address payable protocolTreasuryAddress = initMultiAssetVaultParams
             .treasury;
-        uint256 _amountToWithdraw;
-        uint256[] memory _buyAmountsAfterFee;
-        uint256 _totalFee;
+        uint256 amountToWithdraw;
+        uint256[] memory buyAmountsAfterFee;
+        uint256 totalFee;
 
         (
-            _amountToWithdraw,
-            _buyAmountsAfterFee,
-            _totalFee
-        ) = _calculateAmountsAfterFee(_buyAmounts, _actionFeePercentage);
+            amountToWithdraw,
+            buyAmountsAfterFee,
+            totalFee
+        ) = _calculateAmountsAfterFee(buyAmounts, actionFeePercentage);
 
-        uint256 _totalBuyAmount = _amountToWithdraw - _totalFee;
+        uint256 totalBuyAmount = amountToWithdraw - totalFee;
 
-        _strategyVault.setLastUpdate();
+        strategyVault.setLastUpdate();
 
-        _strategyVault.withdraw(
-            _amountToWithdraw,
+        strategyVault.withdraw(
+            amountToWithdraw,
             address(this), //receiver
-            _depositorAddress //owner
+            depositorAddress //owner
         );
 
-        address[2] memory spenders = [dexRouter, _protocolTreasuryAddress];
-        _ensureApprovedERC20(_depositAsset, spenders);
+        address[2] memory spenders = [dexRouter, protocolTreasuryAddress];
+        _ensureApprovedERC20(depositAsset, spenders);
 
-        uint256[] memory _swappedAssetAmounts = _swapTokens(
-            _depositorAddress,
-            _depositAsset,
-            _buyAssets,
-            _buyAmountsAfterFee
+        uint256[] memory swappedAssetAmounts = _swapTokens(
+            depositorAddress,
+            depositAsset,
+            buyAssets,
+            buyAmountsAfterFee
         );
 
-        ITreasuryVault(_protocolTreasuryAddress).depositERC20(
-            _totalFee,
-            _depositAsset
+        ITreasuryVault(protocolTreasuryAddress).depositERC20(
+            totalFee,
+            depositAsset
         );
 
         emit StrategyActionExecuted(
-            _strategyVaultAddress,
-            _depositorAddress,
-            _depositAsset,
-            _totalBuyAmount,
-            _buyAssets,
-            _swappedAssetAmounts,
-            _totalFee
+            strategyVaultAddress,
+            depositorAddress,
+            depositAsset,
+            totalBuyAmount,
+            buyAssets,
+            swappedAssetAmounts,
+            totalFee
         );
     }
 
     function _getSwapParams(
-        AutomatedVaultERC4626 _strategyVault,
-        address _depositorAddress
+        AutomatedVaultERC4626 strategyVault,
+        address depositorAddress
     )
         private
         view
         returns (
-            address _depositAsset,
-            address[] memory _buyAssets,
-            uint256[] memory _buyAmounts
+            address depositAsset,
+            address[] memory buyAssets,
+            uint256[] memory buyAmounts
         )
     {
         ConfigTypes.InitMultiAssetVaultParams
-            memory _initMultiAssetVaultParams = _strategyVault
+            memory initMultiAssetVaultParams = strategyVault
                 .getInitMultiAssetVaultParams();
-        _depositAsset = address(_initMultiAssetVaultParams.depositAsset);
-        _buyAssets = _strategyVault.getBuyAssetAddresses();
-        _buyAmounts = _strategyVault.getDepositorBuyAmounts(_depositorAddress);
+        depositAsset = address(initMultiAssetVaultParams.depositAsset);
+        buyAssets = strategyVault.getBuyAssetAddresses();
+        buyAmounts = strategyVault.getDepositorBuyAmounts(depositorAddress);
     }
 
     function _calculateAmountsAfterFee(
-        uint256[] memory _buyAmounts,
-        uint256 _actionFeePercentage
+        uint256[] memory buyAmounts,
+        uint256 actionFeePercentage
     )
         private
         returns (
-            uint256 _amountToWithdraw,
-            uint256[] memory _buyAmountsAfterFee,
-            uint256 _totalFee
+            uint256 amountToWithdraw,
+            uint256[] memory buyAmountsAfterFee,
+            uint256 totalFee
         )
     {
-        uint256 _buyAmountsLength = _buyAmounts.length;
-        _buyAmountsAfterFee = new uint256[](_buyAmountsLength);
-        for (uint256 i = 0; i < _buyAmountsLength; i++) {
-            uint256 _buyAmount = _buyAmounts[i];
-            uint256 _feeAmount = _buyAmount.percentMul(_actionFeePercentage);
-            _totalFee += _feeAmount;
-            uint256 _buyAmountAfterFee = _buyAmount - _feeAmount;
-            _buyAmountsAfterFee[i] = _buyAmountAfterFee;
-            _amountToWithdraw += _buyAmount;
+        uint256 buyAmountsLength = buyAmounts.length;
+        buyAmountsAfterFee = new uint256[](buyAmountsLength);
+        for (uint256 i = 0; i < buyAmountsLength; i++) {
+            uint256 buyAmount = buyAmounts[i];
+            uint256 feeAmount = buyAmount.percentMul(actionFeePercentage);
+            totalFee += feeAmount;
+            uint256 buyAmountAfterFee = buyAmount - feeAmount;
+            buyAmountsAfterFee[i] = buyAmountAfterFee;
+            amountToWithdraw += buyAmount;
         }
         require(
-            _amountToWithdraw > 0,
+            amountToWithdraw > 0,
             "Total buyAmount must be greater than zero"
         );
     }
 
     function _swapTokens(
-        address _depositorAddress,
-        address _depositAsset,
-        address[] memory _buyAssets,
-        uint256[] memory _buyAmountsAfterFee
-    ) internal returns (uint256[] memory _amountsOut) {
-        uint256 _buyAssetsLength = _buyAssets.length;
-        _amountsOut = new uint256[](_buyAssetsLength);
-        for (uint256 i = 0; i < _buyAssets.length; i++) {
+        address depositorAddress,
+        address depositAsset,
+        address[] memory buyAssets,
+        uint256[] memory buyAmountsAfterFee
+    ) internal returns (uint256[] memory amountsOut) {
+        uint256 buyAssetsLength = buyAssets.length;
+        amountsOut = new uint256[](buyAssetsLength);
+        for (uint256 i = 0; i < buyAssets.length; i++) {
             uint256 amountOut = _swapToken(
-                _depositorAddress,
-                _depositAsset,
-                _buyAssets[i],
-                _buyAmountsAfterFee[i]
+                depositorAddress,
+                depositAsset,
+                buyAssets[i],
+                buyAmountsAfterFee[i]
             );
-            _amountsOut[i] = amountOut;
+            amountsOut[i] = amountOut;
         }
     }
 
     function _swapToken(
-        address _depositorAddress,
-        address _depositAsset,
-        address _buyAsset,
-        uint256 _buyAmountAfterFee
-    ) internal returns (uint256 _amountOut) {
-        IUniswapV2Router _dexRouterContract = IUniswapV2Router(dexRouter);
+        address depositorAddress,
+        address depositAsset,
+        address buyAsset,
+        uint256 buyAmountAfterFee
+    ) internal returns (uint256 amountOut) {
+        IUniswapV2Router dexRouterContract = IUniswapV2Router(dexRouter);
 
-        if (_buyAsset != dexMainToken && _depositAsset != dexMainToken) {
-            address[] memory _indirectPath = _getIndirectPath(
-                _depositAsset,
-                _buyAsset
+        if (buyAsset != dexMainToken && depositAsset != dexMainToken) {
+            address[] memory indirectPath = _getIndirectPath(
+                depositAsset,
+                buyAsset
             );
-            uint256[] memory _minAmountsOut = _dexRouterContract.getAmountsOut(
-                _buyAmountAfterFee,
-                _indirectPath
+            uint256[] memory minAmountsOut = dexRouterContract.getAmountsOut(
+                buyAmountAfterFee,
+                indirectPath
             );
-            uint256 _minAmountOut = _minAmountsOut[_minAmountsOut.length - 1];
+            uint256 minAmountOut = minAmountsOut[minAmountsOut.length - 1];
 
-            uint256 _amountOutMin = _minAmountOut.percentMul(
+            uint256 amountOutMin = minAmountOut.percentMul(
                 PercentageMath.PERCENTAGE_FACTOR - MAX_SLIPPAGE_PERC
             );
 
-            uint256[] memory _amountsOut = _dexRouterContract
+            uint256[] memory amountsOut = dexRouterContract
                 .swapExactTokensForTokens(
-                    _buyAmountAfterFee,
-                    _amountOutMin,
-                    _indirectPath,
-                    _depositorAddress, // swapped tokens sent directly to vault depositor
+                    buyAmountAfterFee,
+                    amountOutMin,
+                    indirectPath,
+                    depositorAddress, // swapped tokens sent directly to vault depositor
                     block.timestamp + 600 // 10 min max to execute
                 );
-            _amountOut = _amountsOut[_amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
+            amountOut = amountsOut[amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
         } else {
-            address[] memory _directPath = _getDirectPath(
-                _depositAsset,
-                _buyAsset
+            address[] memory directPath = _getDirectPath(
+                depositAsset,
+                buyAsset
             );
-            uint256[] memory _minAmountsOut = _dexRouterContract.getAmountsOut(
-                _buyAmountAfterFee,
-                _directPath
+            uint256[] memory minAmountsOut = dexRouterContract.getAmountsOut(
+                buyAmountAfterFee,
+                directPath
             );
-            uint256 _minAmountOut = _minAmountsOut[_minAmountsOut.length - 1];
+            uint256 minAmountOut = minAmountsOut[minAmountsOut.length - 1];
 
-            uint256 _amountOutMin = _minAmountOut.percentMul(
+            uint256 amountOutMin = minAmountOut.percentMul(
                 PercentageMath.PERCENTAGE_FACTOR - MAX_SLIPPAGE_PERC
             );
 
-            uint256[] memory _amountsOut = _dexRouterContract
+            uint256[] memory amountsOut = dexRouterContract
                 .swapExactTokensForTokens(
-                    _buyAmountAfterFee,
-                    _amountOutMin,
-                    _directPath,
-                    _depositorAddress, // swapped tokens sent directly to vault depositor
+                    buyAmountAfterFee,
+                    amountOutMin,
+                    directPath,
+                    depositorAddress, // swapped tokens sent directly to vault depositor
                     block.timestamp + 600 // 10 min max to execute
                 );
-            _amountOut = _amountsOut[_amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
+            amountOut = amountsOut[amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
         }
     }
 
@@ -266,23 +266,23 @@ contract StrategyWorker is IStrategyWorker {
     }
 
     function _getDirectPath(
-        address _depositAsset,
-        address _buyAsset
+        address depositAsset,
+        address buyAsset
     ) private pure returns (address[] memory) {
-        address[] memory _path = new address[](2);
-        _path[0] = _depositAsset;
-        _path[1] = _buyAsset;
-        return _path;
+        address[] memory path = new address[](2);
+        path[0] = depositAsset;
+        path[1] = buyAsset;
+        return path;
     }
 
     function _getIndirectPath(
-        address _depositAsset,
-        address _buyAsset
+        address depositAsset,
+        address buyAsset
     ) private view returns (address[] memory) {
-        address[] memory _path = new address[](3);
-        _path[0] = _depositAsset;
-        _path[1] = dexMainToken;
-        _path[2] = _buyAsset;
-        return _path;
+        address[] memory path = new address[](3);
+        path[0] = depositAsset;
+        path[1] = dexMainToken;
+        path[2] = buyAsset;
+        return path;
     }
 }

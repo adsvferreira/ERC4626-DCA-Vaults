@@ -5,7 +5,7 @@ import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 
 interface IStrategyWorker {
     function executeStrategyAction(
-        address _strategyVaultAddress,
-        address _depositorAddress
+        address strategyVaultAddress,
+        address depositorAddress
     ) external;
 }

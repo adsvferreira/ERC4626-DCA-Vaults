@@ -16,16 +16,14 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract Controller is IController, Ownable {
     // Only Callable by Pulsar Deployer EOA Address
     function triggerStrategyAction(
-        address _strategyWorkerAddress,
-        address _strategyVaultAddress,
-        address _depositorAddress
+        address strategyWorkerAddress,
+        address strategyVaultAddress,
+        address depositorAddress
     ) external onlyOwner {
-        IStrategyWorker strategyWorker = IStrategyWorker(
-            _strategyWorkerAddress
-        );
+        IStrategyWorker strategyWorker = IStrategyWorker(strategyWorkerAddress);
         strategyWorker.executeStrategyAction(
-            _strategyVaultAddress,
-            _depositorAddress
+            strategyVaultAddress,
+            depositorAddress
         );
     }
 }

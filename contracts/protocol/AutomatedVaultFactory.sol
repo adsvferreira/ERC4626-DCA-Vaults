@@ -106,13 +106,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     }
 
     function allPairsExistForBuyAssets(
-        address _depositAsset,
-        address[] memory _buyAssets
+        address depositAsset,
+        address[] memory buyAssets
     ) external view returns (bool) {
-        for (uint256 i = 0; i < _buyAssets.length; i++) {
+        for (uint256 i = 0; i < buyAssets.length; i++) {
             if (
-                this.pairExistsForBuyAsset(_depositAsset, _buyAssets[i]) ==
-                false
+                this.pairExistsForBuyAsset(depositAsset, buyAssets[i]) == false
             ) {
                 return false;
             }
@@ -121,17 +120,17 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     }
 
     function pairExistsForBuyAsset(
-        address _depositAsset,
-        address _buyAsset
+        address depositAsset,
+        address buyAsset
     ) external view returns (bool) {
         require(
-            _depositAsset != _buyAsset,
+            depositAsset != buyAsset,
             "BUY ASSET LIST CONTAINS DEPOSIT ASSET"
         );
-        if (uniswapV2Factory.getPair(_depositAsset, _buyAsset) != address(0)) {
+        if (uniswapV2Factory.getPair(depositAsset, buyAsset) != address(0)) {
             return true;
         }
-        if (uniswapV2Factory.getPair(_buyAsset, dexMainToken) != address(0)) {
+        if (uniswapV2Factory.getPair(buyAsset, dexMainToken) != address(0)) {
             return true;
         }
         return false;

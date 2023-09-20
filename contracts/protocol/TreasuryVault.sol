@@ -35,35 +35,35 @@ contract TreasuryVault is ITreasuryVault, Ownable {
         emit EtherReceived(msg.sender, msg.value);
     }
 
-    function withdrawNative(uint256 _amount) external onlyOwner {
-        require(_amount <= address(this).balance, "Insufficient balance");
-        (bool success, ) = owner().call{value: _amount}("");
+    function withdrawNative(uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "Insufficient balance");
+        (bool success, ) = owner().call{value: amount}("");
         require(success, "Ether transfer failed");
-        emit NativeWithdrawal(owner(), _amount);
+        emit NativeWithdrawal(owner(), amount);
     }
 
-    function depositERC20(uint256 _amount, address _asset) external {
-        IERC20(_asset).safeTransferFrom(msg.sender, address(this), _amount);
-        emit ERC20Received(msg.sender, _amount, _asset);
+    function depositERC20(uint256 amount, address asset) external {
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        emit ERC20Received(msg.sender, amount, asset);
     }
 
     function withdrawERC20(
-        address _tokenAddress,
-        uint256 _amount
+        address tokenAddress,
+        uint256 amount
     ) external onlyOwner {
-        IERC20 token = IERC20(_tokenAddress);
+        IERC20 token = IERC20(tokenAddress);
         require(
-            _amount <= token.balanceOf(address(this)),
+            amount <= token.balanceOf(address(this)),
             "Insufficient balance"
         );
-        (bool success, ) = _tokenAddress.call(
+        (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
                 "transfer(address,uint256)",
                 owner(),
-                _amount
+                amount
             )
         );
         require(success, "Token transfer failed");
-        emit ERC20Withdrawal(owner(), _tokenAddress, _amount);
+        emit ERC20Withdrawal(owner(), tokenAddress, amount);
     }
 }

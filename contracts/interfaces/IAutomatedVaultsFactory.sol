@@ -13,12 +13,12 @@ interface IAutomatedVaultsFactory {
     ) external payable returns (address newVaultAddress);
 
     function allPairsExistForBuyAssets(
-        address _depositAsset,
-        address[] memory _buyAssets
+        address depositAsset,
+        address[] memory buyAssets
     ) external view returns (bool);
 
     function pairExistsForBuyAsset(
-        address _depositAsset,
-        address _buyAsset
+        address depositAsset,
+        address buyAsset
     ) external view returns (bool);
 }
