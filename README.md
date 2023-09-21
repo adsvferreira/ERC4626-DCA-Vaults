@@ -6,10 +6,11 @@
 
 ### Arbitrum Mainnet Contract Addresses
 
-- **TreasuryVault:** 0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248
-- **Controller:** 0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900
-- **StrategyWorker:** 0x0d10dBD15D7F811d090B39E743bb523D79438199
-- **AutomatedVaultsFactory:** 0xB1fc77C3C581075c658B40691c02F61B7E429972
+- **TreasuryVault:** 0x92B6c99bf8b26B78Bc064F96Dc80640BD709e184
+- **Controller:** 0xa0d180f4c5b3B48144dFfC0Bf48ce2191Ec87bed
+- **StrategyWorker:** 0xFf5694903A22a7Ca13e25bc5C2aCA37fb91ad4f5
+- **AutomatedVaultsFactory:** 0x57da7DFAD549e8fB003a8C5373010F17deb3fc7F
+- **Resolver:** 0x7A00964A733250d6a65154bC79414Bc31b5161DC
 
 # Project Setup Guide
 
