@@ -14,16 +14,40 @@ import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Controller is IController, Ownable {
-    // Only Callable by Pulsar Deployer EOA Address
+    mapping(address => bool) public whitelistedCallers;
+
+    constructor() {
+        whitelistedCallers[msg.sender] = true;
+    }
+
+    // Only Callable by Pulsar Deployer EOA Address (Owner) or Gelato Dedicated msg.sender
+    modifier onlyWhitelisted() {
+        require(whitelistedCallers[msg.sender], "FORBIDDEN");
+        _;
+    }
+
     function triggerStrategyAction(
         address strategyWorkerAddress,
         address strategyVaultAddress,
         address depositorAddress
-    ) external onlyOwner {
+    ) external onlyWhitelisted {
         IStrategyWorker strategyWorker = IStrategyWorker(strategyWorkerAddress);
         strategyWorker.executeStrategyAction(
             strategyVaultAddress,
             depositorAddress
         );
+    }
+
+    function setWhitelistedCaller(
+        address whitelistedCaller
+    ) external onlyOwner {
+        whitelistedCallers[whitelistedCaller] = true;
+    }
+
+    function delWhitelistedCaller(
+        address whitelistedCaller
+    ) external onlyOwner {
+        require(whitelistedCaller != owner(), "Owner cannot be removed");
+        whitelistedCallers[whitelistedCaller] = false;
     }
 }

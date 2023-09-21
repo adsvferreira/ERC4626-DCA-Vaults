@@ -32,7 +32,6 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
 
     address[] public buyAssetAddresses;
     uint256 public buyAssetsLength;
-    uint256 public lastUpdate; //TODO: Remove if gelato works
     /**
      * @dev Note: Removing entries from dynamic arrays can be gas-expensive.
      * The `allDepositorAddresses` array stores all users who have deposited funds in this vault,
@@ -115,10 +114,6 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         return shares;
     }
 
-    function setLastUpdate() external onlyStrategyWorker {
-        lastUpdate = block.timestamp;
-    }
-
     function setLastUpdatePerDepositor(
         address depositor
     ) external onlyStrategyWorker {
@@ -173,6 +168,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
     }
 
     function _fillUpdateFrequenciesMap() private {
+        _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
         _updateFrequencies[Enums.BuyFrequency.WEEKLY] = 604800;
         _updateFrequencies[Enums.BuyFrequency.BI_WEEKLY] = 1209600;

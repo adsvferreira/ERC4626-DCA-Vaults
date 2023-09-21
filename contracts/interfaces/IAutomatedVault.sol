@@ -4,8 +4,6 @@ pragma solidity 0.8.21;
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 
 interface IAutomatedVault {
-    function setLastUpdate() external;
-
     function setLastUpdatePerDepositor(address depositor) external;
 
     function getInitMultiAssetVaultParams()

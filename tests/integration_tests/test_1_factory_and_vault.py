@@ -30,9 +30,9 @@ dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
 empty_wallet = get_account_from_pk(3)
 
-DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 100_000
+DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 9_999_999_999_999_999_999
 DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 20_000
-DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 100_000
+DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 9_999_999_999_999_999_999
 DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT = 20_000
 DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 10_000
 
@@ -624,7 +624,7 @@ def test_set_last_update_by_not_worker_address():
     strategy_vault = get_strategy_vault()
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
-        strategy_vault.setLastUpdate({"from": dev_wallet})
+        strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
 
 ################################ Helper Functions ################################

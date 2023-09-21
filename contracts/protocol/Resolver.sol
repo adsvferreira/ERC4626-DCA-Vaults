@@ -28,34 +28,35 @@ contract Resolver {
         strategyWorkerAddress = _strategyWorkerAddress;
     }
 
-    function checker()
-        external
-        view
-        returns (bool canExec, bytes memory execPayload)
-    {
+    function checker() external view returns (bool, bytes memory) {
         uint256 allVaultsLength = automatedVaultsFactory.allVaultsLength();
+        bool canExec;
+        bytes memory execPayload;
 
         for (uint256 i = 0; i < allVaultsLength; i++) {
             AutomatedVaultERC4626 vault = AutomatedVaultERC4626(
                 automatedVaultsFactory.getVaultAddress(i)
             );
 
-            for (uint256 j = 0; i < vault.allDepositorsLength(); j++) {
+            for (uint256 j = 0; j < vault.allDepositorsLength(); j++) {
                 execPayload = abi.encodeWithSelector(
                     IController.triggerStrategyAction.selector,
                     strategyWorkerAddress,
                     address(vault),
-                    vault.allDepositorAddresses(i)
+                    vault.allDepositorAddresses(j)
                 );
 
                 canExec =
-                    block.timestamp >=
-                    vault.lastUpdateOf(vault.allDepositorAddresses(i)) +
-                        vault.getUpdateFrequencyTimestamp() ||
-                    vault.lastUpdateOf(vault.allDepositorAddresses(i)) == 0;
+                    (block.timestamp >=
+                        (vault.lastUpdateOf(vault.allDepositorAddresses(j)) +
+                            vault.getUpdateFrequencyTimestamp())) ||
+                    vault.lastUpdateOf(vault.allDepositorAddresses(j)) == 0;
 
-                if (canExec) break;
+                if (canExec) {
+                    return (canExec, execPayload);
+                }
             }
         }
+        return (canExec, execPayload);
     }
 }
