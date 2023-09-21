@@ -1,3 +1,106 @@
+treasury_abi = [
+    {"inputs": [], "name": "constructor", "stateMutability": "nonpayable", "type": "constructor"},
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "internalType": "address", "name": "sender", "type": "address"},
+            {"indexed": False, "internalType": "uint256", "name": "amount", "type": "uint256"},
+            {"indexed": False, "internalType": "address", "name": "asset", "type": "address"},
+        ],
+        "name": "ERC20Received",
+        "type": "event",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "internalType": "address", "name": "owner", "type": "address"},
+            {"indexed": True, "internalType": "address", "name": "token", "type": "address"},
+            {"indexed": False, "internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "ERC20Withdrawal",
+        "type": "event",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "internalType": "address", "name": "sender", "type": "address"},
+            {"indexed": False, "internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "EtherReceived",
+        "type": "event",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "internalType": "address", "name": "owner", "type": "address"},
+            {"indexed": False, "internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "NativeWithdrawal",
+        "type": "event",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "internalType": "address", "name": "previousOwner", "type": "address"},
+            {"indexed": True, "internalType": "address", "name": "newOwner", "type": "address"},
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": False, "internalType": "address", "name": "creator", "type": "address"},
+            {"indexed": False, "internalType": "address", "name": "treasuryAddress", "type": "address"},
+        ],
+        "name": "TreasuryCreated",
+        "type": "event",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "amount", "type": "uint256"},
+            {"internalType": "address", "name": "asset", "type": "address"},
+        ],
+        "name": "depositERC20",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {"inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+    {
+        "inputs": [{"internalType": "address", "name": "newOwner", "type": "address"}],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "tokenAddress", "type": "address"},
+            {"internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "withdrawERC20",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+        "name": "withdrawNative",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {"stateMutability": "payable", "type": "receive"},
+]
+
 vaults_factory_abi = [
     {
         "inputs": [
@@ -8,6 +111,7 @@ vaults_factory_abi = [
             {"internalType": "uint256", "name": "_creatorPercentageFeeOnDeposit", "type": "uint256"},
             {"internalType": "uint256", "name": "_treasuryPercentageFeeOnBalanceUpdate", "type": "uint256"},
         ],
+        "name": "constructor",
         "stateMutability": "nonpayable",
         "type": "constructor",
     },
@@ -27,7 +131,7 @@ vaults_factory_abi = [
             {"indexed": True, "internalType": "address", "name": "depositAsset", "type": "address"},
             {"indexed": False, "internalType": "address[]", "name": "buyAssets", "type": "address[]"},
             {"indexed": False, "internalType": "address", "name": "vaultAddress", "type": "address"},
-            {"indexed": False, "internalType": "uint256[]", "name": "buyAmounts", "type": "uint256[]"},
+            {"indexed": False, "internalType": "uint256[]", "name": "buyPercentages", "type": "uint256[]"},
             {"indexed": False, "internalType": "enum Enums.BuyFrequency", "name": "buyFrequency", "type": "uint8"},
             {"indexed": False, "internalType": "enum Enums.StrategyType", "name": "strategyType", "type": "uint8"},
         ],
@@ -36,18 +140,11 @@ vaults_factory_abi = [
     },
     {
         "inputs": [
-            {"internalType": "address", "name": "_depositAsset", "type": "address"},
-            {"internalType": "address[]", "name": "_buyAssets", "type": "address[]"},
+            {"internalType": "address", "name": "depositAsset", "type": "address"},
+            {"internalType": "address[]", "name": "buyAssets", "type": "address[]"},
         ],
         "name": "allPairsExistForBuyAssets",
         "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
-        "stateMutability": "view",
-        "type": "function",
-    },
-    {
-        "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-        "name": "allVaults",
-        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
         "stateMutability": "view",
         "type": "function",
     },
@@ -73,7 +170,7 @@ vaults_factory_abi = [
             },
             {
                 "components": [
-                    {"internalType": "uint256[]", "name": "buyAmounts", "type": "uint256[]"},
+                    {"internalType": "uint256[]", "name": "buyPercentages", "type": "uint256[]"},
                     {"internalType": "enum Enums.BuyFrequency", "name": "buyFrequency", "type": "uint8"},
                     {"internalType": "enum Enums.StrategyType", "name": "strategyType", "type": "uint8"},
                     {"internalType": "address", "name": "strategyWorker", "type": "address"},
@@ -113,9 +210,16 @@ vaults_factory_abi = [
         "type": "function",
     },
     {
+        "inputs": [{"internalType": "uint256", "name": "i", "type": "uint256"}],
+        "name": "getVaultAddress",
+        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
         "inputs": [
-            {"internalType": "address", "name": "_depositAsset", "type": "address"},
-            {"internalType": "address", "name": "_buyAsset", "type": "address"},
+            {"internalType": "address", "name": "depositAsset", "type": "address"},
+            {"internalType": "address", "name": "buyAsset", "type": "address"},
         ],
         "name": "pairExistsForBuyAsset",
         "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
@@ -167,7 +271,7 @@ vault_abi = [
             },
             {
                 "components": [
-                    {"internalType": "uint256[]", "name": "buyAmounts", "type": "uint256[]"},
+                    {"internalType": "uint256[]", "name": "buyPercentages", "type": "uint256[]"},
                     {"internalType": "enum Enums.BuyFrequency", "name": "buyFrequency", "type": "uint8"},
                     {"internalType": "enum Enums.StrategyType", "name": "strategyType", "type": "uint8"},
                     {"internalType": "address", "name": "strategyWorker", "type": "address"},
@@ -177,6 +281,7 @@ vault_abi = [
                 "type": "tuple",
             },
         ],
+        "name": "constructor",
         "stateMutability": "nonpayable",
         "type": "constructor",
     },
@@ -306,13 +411,6 @@ vault_abi = [
         "type": "function",
     },
     {
-        "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-        "name": "buyAssetsDecimals",
-        "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
-        "stateMutability": "view",
-        "type": "function",
-    },
-    {
         "inputs": [],
         "name": "buyAssetsLength",
         "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
@@ -368,6 +466,13 @@ vault_abi = [
         "type": "function",
     },
     {
+        "inputs": [{"internalType": "address", "name": "depositor", "type": "address"}],
+        "name": "getDepositorBuyAmounts",
+        "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
         "inputs": [],
         "name": "getInitMultiAssetVaultParams",
         "outputs": [
@@ -393,12 +498,19 @@ vault_abi = [
         "type": "function",
     },
     {
+        "inputs": [{"internalType": "address", "name": "depositor", "type": "address"}],
+        "name": "getInitialDepositBalance",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
         "inputs": [],
         "name": "getStrategyParams",
         "outputs": [
             {
                 "components": [
-                    {"internalType": "uint256[]", "name": "buyAmounts", "type": "uint256[]"},
+                    {"internalType": "uint256[]", "name": "buyPercentages", "type": "uint256[]"},
                     {"internalType": "enum Enums.BuyFrequency", "name": "buyFrequency", "type": "uint8"},
                     {"internalType": "enum Enums.StrategyType", "name": "strategyType", "type": "uint8"},
                     {"internalType": "address", "name": "strategyWorker", "type": "address"},
@@ -408,6 +520,13 @@ vault_abi = [
                 "type": "tuple",
             }
         ],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [],
+        "name": "getUpdateFrequencyTimestamp",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
         "stateMutability": "view",
         "type": "function",
     },
@@ -439,8 +558,8 @@ vault_abi = [
         "type": "function",
     },
     {
-        "inputs": [],
-        "name": "lastUpdate",
+        "inputs": [{"internalType": "address", "name": "depositor", "type": "address"}],
+        "name": "lastUpdateOf",
         "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
         "stateMutability": "view",
         "type": "function",
@@ -529,7 +648,13 @@ vault_abi = [
         "stateMutability": "nonpayable",
         "type": "function",
     },
-    {"inputs": [], "name": "setLastUpdate", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+    {
+        "inputs": [{"internalType": "address", "name": "depositor", "type": "address"}],
+        "name": "setLastUpdatePerDepositor",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
     {
         "inputs": [],
         "name": "strategyParams",

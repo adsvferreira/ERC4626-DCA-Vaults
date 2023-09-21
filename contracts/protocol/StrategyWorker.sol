@@ -63,6 +63,14 @@ contract StrategyWorker is IStrategyWorker {
             strategyVaultAddress
         );
 
+        require(
+            block.timestamp >=
+                strategyVault.lastUpdateOf(depositorAddress) +
+                    strategyVault.getUpdateFrequencyTimestamp() ||
+                strategyVault.lastUpdateOf(depositorAddress) == 0,
+            "This vault cannot be updated yet for this user"
+        );
+
         (
             address depositAsset,
             address[] memory buyAssets,
@@ -89,7 +97,7 @@ contract StrategyWorker is IStrategyWorker {
 
         uint256 totalBuyAmount = amountToWithdraw - totalFee;
 
-        strategyVault.setLastUpdate();
+        strategyVault.setLastUpdatePerDepositor(depositorAddress);
 
         strategyVault.withdraw(
             amountToWithdraw,

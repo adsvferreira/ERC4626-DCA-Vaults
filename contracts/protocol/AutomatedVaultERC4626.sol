@@ -32,7 +32,6 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
 
     address[] public buyAssetAddresses;
     uint256 public buyAssetsLength;
-    uint256 public lastUpdate;
     /**
      * @dev Note: Removing entries from dynamic arrays can be gas-expensive.
      * The `allDepositorAddresses` array stores all users who have deposited funds in this vault,
@@ -48,6 +47,8 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
      */
     mapping(address depositor => uint256) private _initialDepositBalances;
     mapping(address depositor => uint256[]) private _depositorBuyAmounts;
+    mapping(Enums.BuyFrequency => uint256) private _updateFrequencies;
+    mapping(address depositor => uint256) private _lastUpdatePerDepositor;
 
     event CreatorFeeTransfered(
         address indexed vault,
@@ -87,6 +88,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
         initMultiAssetVaultParams.isActive = false;
+        _fillUpdateFrequenciesMap();
     }
 
     modifier onlyStrategyWorker() {
@@ -112,8 +114,10 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         return shares;
     }
 
-    function setLastUpdate() external onlyStrategyWorker {
-        lastUpdate = block.timestamp;
+    function setLastUpdatePerDepositor(
+        address depositor
+    ) external onlyStrategyWorker {
+        _lastUpdatePerDepositor[depositor] = block.timestamp;
     }
 
     function getInitMultiAssetVaultParams()
@@ -138,14 +142,37 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
 
     function getInitialDepositBalance(
         address depositor
-    ) public view virtual returns (uint256) {
+    ) external view virtual returns (uint256) {
         return _initialDepositBalances[depositor];
     }
 
     function getDepositorBuyAmounts(
         address depositor
-    ) public view virtual returns (uint256[] memory) {
+    ) external view virtual returns (uint256[] memory) {
         return _depositorBuyAmounts[depositor];
+    }
+
+    function getUpdateFrequencyTimestamp()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return _updateFrequencies[strategyParams.buyFrequency];
+    }
+
+    function lastUpdateOf(
+        address depositor
+    ) external view virtual returns (uint256) {
+        return _lastUpdatePerDepositor[depositor];
+    }
+
+    function _fillUpdateFrequenciesMap() private {
+        _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
+        _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
+        _updateFrequencies[Enums.BuyFrequency.WEEKLY] = 604800;
+        _updateFrequencies[Enums.BuyFrequency.BI_WEEKLY] = 1209600;
+        _updateFrequencies[Enums.BuyFrequency.MONTHLY] = 2630016;
     }
 
     function _validateInputs(

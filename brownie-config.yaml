@@ -31,10 +31,11 @@ networks:
       ] # GMX + ARB
     vault_name: "GMX/ARB DCA Vault"
     vault_symbol: "GMX/ARB_DCA"
-    vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
-    controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
-    worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
-    treasury_address: "0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248"
+    vaults_factory_address: "0x57da7DFAD549e8fB003a8C5373010F17deb3fc7F"
+    controller_address: "0xa0d180f4c5b3B48144dFfC0Bf48ce2191Ec87bed"
+    worker_address: "0xFf5694903A22a7Ca13e25bc5C2aCA37fb91ad4f5"
+    treasury_address: "0x92B6c99bf8b26B78Bc064F96Dc80640BD709e184"
+    resolver_address: "0x7A00964A733250d6a65154bC79414Bc31b5161DC"
     token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON
     too_many_buy_token_addresses:
       [
@@ -65,10 +66,11 @@ networks:
       ] # GMX + ARB
     vault_name: "GMX/ARB DCA Vault"
     vault_symbol: "GMX/ARB_DCA"
-    vaults_factory_address: "0xB1fc77C3C581075c658B40691c02F61B7E429972"
-    controller_address: "0xf4AfD9A546cFf7DDfA80FD340C20830ab46c5900"
-    worker_address: "0x0d10dBD15D7F811d090B39E743bb523D79438199"
-    treasury_address: "0x4b4DfB14f15de2e2c0a73e8DdD82eb97b00A0248"
+    vaults_factory_address: "0x57da7DFAD549e8fB003a8C5373010F17deb3fc7F"
+    controller_address: "0xa0d180f4c5b3B48144dFfC0Bf48ce2191Ec87bed"
+    worker_address: "0xFf5694903A22a7Ca13e25bc5C2aCA37fb91ad4f5"
+    treasury_address: "0x92B6c99bf8b26B78Bc064F96Dc80640BD709e184"
+    resolver_address: "0x7A00964A733250d6a65154bC79414Bc31b5161DC"
     token_not_paired_with_weth_address: "0x55678cd083fcdc2947a0df635c93c838c89454a3" # LON
     too_many_buy_token_addresses:
       [

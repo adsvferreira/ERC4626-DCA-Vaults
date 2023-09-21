@@ -1,16 +1,15 @@
 from brownie import config, network
 from helpers import get_account_from_pk
 from brownie import (
-    AutomatedVaultsFactory,
+    Contract,
+    Resolver,
+    Controller,
     TreasuryVault,
     StrategyWorker,
-    Controller,
-    Contract,
+    AutomatedVaultsFactory,
 )
 
-CONSOLE_SEPARATOR = (
-    "--------------------------------------------------------------------------"
-)
+CONSOLE_SEPARATOR = "--------------------------------------------------------------------------"
 
 
 def main():
@@ -21,12 +20,8 @@ def main():
     dev_wallet = get_account_from_pk(1)
     print(f"WALLET USED FOR DEPLOYMENT: {dev_wallet.address}")
     dex_router_address = config["networks"][network.show_active()]["dex_router_address"]
-    dex_factory_address = config["networks"][network.show_active()][
-        "dex_factory_address"
-    ]
-    dex_main_token_address = config["networks"][network.show_active()][
-        "dex_main_token_address"
-    ]
+    dex_factory_address = config["networks"][network.show_active()]["dex_factory_address"]
+    dex_main_token_address = config["networks"][network.show_active()]["dex_main_token_address"]
     verify_flag = config["networks"][network.show_active()]["verify"]
 
     # SETUP
@@ -46,17 +41,18 @@ def main():
 
     print(CONSOLE_SEPARATOR)
     print("STRATEGY WORKER DEPLOYMENT:")
-    deploy_strategy_worker(
+    strategy_worker = deploy_strategy_worker(
         dev_wallet,
         verify_flag,
         dex_router_address,
         dex_main_token_address,
         controller_address,
     )
+    strategy_worker_address = strategy_worker.address
 
     print(CONSOLE_SEPARATOR)
     print("STRATEGY VAULTS FACTORY DEPLOYMENT:")
-    deploy_automated_vaults_factory(
+    automated_vaults_factory = deploy_automated_vaults_factory(
         dev_wallet,
         verify_flag,
         dex_factory_address,
@@ -66,6 +62,11 @@ def main():
         creator_percentage_fee_on_deposit,
         treasury_percentage_fee_on_balance_update,
     )
+    automated_vaults_factory_address = automated_vaults_factory.address
+
+    print(CONSOLE_SEPARATOR)
+    print("RESOLVER DEPLOYMENT:")
+    deploy_resolver(dev_wallet, verify_flag, automated_vaults_factory_address, strategy_worker_address)
 
 
 def deploy_treasury_vault(wallet_address: str, verify_flag: bool) -> Contract:
@@ -116,3 +117,15 @@ def deploy_automated_vaults_factory(
         publish_source=verify_flag,
     )
     return AutomatedVaultsFactory[-1]
+
+
+def deploy_resolver(
+    wallet_address: str, verify_flag: bool, automated_vaults_factory_address: str, strategy_worker_address: str
+) -> Contract:
+    Resolver.deploy(
+        automated_vaults_factory_address,
+        strategy_worker_address,
+        {"from": wallet_address},
+        publish_source=verify_flag,
+    )
+    return Resolver[-1]
