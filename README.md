@@ -11,6 +11,7 @@
 - **StrategyWorker:** 0xFf5694903A22a7Ca13e25bc5C2aCA37fb91ad4f5
 - **AutomatedVaultsFactory:** 0x57da7DFAD549e8fB003a8C5373010F17deb3fc7F
 - **Resolver:** 0x7A00964A733250d6a65154bC79414Bc31b5161DC
+- **Gelato Msg Sender:** 0xf454b2cb8c149a64acde77d8b74b10019a21e2bf
 
 # Project Setup Guide
 
