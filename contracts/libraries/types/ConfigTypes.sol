@@ -23,6 +23,15 @@ library ConfigTypes {
         address depositAsset;
         address[] buyAssets;
     }
+
+    /**
+     * @notice Each strategy requires a `strategyWorker` address as input enabling:
+     * - future upgrades of `strategyWorker` without breaking compatibility.
+     * - scalability of Gelato Automation in case of to many strategies managed by 1 Resolver contract.
+     *
+     * @dev When deploying a new `strategyWorker`, ensure a corresponding Resolver
+     * is deployed and Gelato Automation is configured accordingly.
+     */
     struct StrategyParams {
         uint256[] buyPercentages;
         Enums.BuyFrequency buyFrequency;

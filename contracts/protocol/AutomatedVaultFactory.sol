@@ -65,12 +65,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     ) external payable returns (address newVaultAddress) {
         require(
             msg.value >= treasuryFixedFeeOnVaultCreation,
-            "ETHER SENT MUST COVER VAULT CREATION FEE"
+            "Ether sent must cover vault creation fee"
         );
 
         _validateCreateVaultInputs(
             initMultiAssetVaultFactoryParams,
-            strategyParams.buyPercentages
+            strategyParams
         );
 
         // SEND CREATION FEE TO PROTOCOL TREASURY
@@ -125,7 +125,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     ) external view returns (bool) {
         require(
             depositAsset != buyAsset,
-            "BUY ASSET LIST CONTAINS DEPOSIT ASSET"
+            "Buy asset list contains deposit asset"
         );
         if (uniswapV2Factory.getPair(depositAsset, buyAsset) != address(0)) {
             return true;
@@ -145,12 +145,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function _validateCreateVaultInputs(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             memory initMultiAssetVaultFactoryParams,
-        uint256[] memory buyPercentages
+        ConfigTypes.StrategyParams memory strategyParams
     ) private view {
         require(
             address(initMultiAssetVaultFactoryParams.depositAsset) !=
                 address(0),
-            "ZERO_ADDRESS"
+            "Deposit address cannot be zero address"
         );
         if (initMultiAssetVaultFactoryParams.depositAsset != dexMainToken) {
             require(
@@ -158,7 +158,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                     initMultiAssetVaultFactoryParams.depositAsset,
                     dexMainToken
                 ) != address(0),
-                "SWAP PATH BETWEEN DEPOSIT ASSET AND DEX MAIN TOKEN NOT FOUND"
+                "Swap path between deposit asser and dex main token not found"
             );
         }
         require(
@@ -166,12 +166,16 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 initMultiAssetVaultFactoryParams.depositAsset,
                 initMultiAssetVaultFactoryParams.buyAssets
             ),
-            "SWAP PATH NOT FOUND FOR AT LEAST 1 BUY ASSET"
+            "Swap path not found for at least 1 buy asset"
         );
         require(
-            _buyPercentagesSum(buyPercentages) <=
+            _buyPercentagesSum(strategyParams.buyPercentages) <=
                 PercentageMath.PERCENTAGE_FACTOR,
-            "BUY PERCENTAGES SUM IS GT 100"
+            "Buy percentages sum is gt 100"
+        );
+        require(
+            address(strategyParams.strategyWorker) != address(0),
+            "strategyWorker address cannot be zero address"
         );
     }
 

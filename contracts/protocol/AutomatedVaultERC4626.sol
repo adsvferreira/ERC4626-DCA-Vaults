@@ -255,7 +255,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         uint256 shares
     ) internal {
         if (receiver == initMultiAssetVaultParams.creator) {
-            if (balanceOf(receiver) == 0) {
+            if (balanceOf(receiver) == 0 && shares > 0) {
                 allDepositorAddresses.push(receiver);
                 allDepositorsLength += 1;
                 _initialDepositBalances[receiver] = shares;
@@ -279,7 +279,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
                 creatorShares
             );
 
-            if (balanceOf(receiver) == 0) {
+            if (balanceOf(receiver) == 0 && depositorShares > 0) {
                 allDepositorAddresses.push(receiver);
                 allDepositorsLength += 1;
                 _initialDepositBalances[receiver] = depositorShares;
@@ -287,7 +287,10 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             }
             _mint(receiver, depositorShares);
 
-            if (balanceOf(initMultiAssetVaultParams.creator) == 0) {
+            if (
+                balanceOf(initMultiAssetVaultParams.creator) == 0 &&
+                creatorShares > 0
+            ) {
                 allDepositorAddresses.push(initMultiAssetVaultParams.creator);
                 allDepositorsLength += 1;
                 _initialDepositBalances[
@@ -298,7 +301,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             _mint(initMultiAssetVaultParams.creator, creatorShares);
         }
         // Activates vault after 1st deposit
-        if (initMultiAssetVaultParams.isActive == false) {
+        if (initMultiAssetVaultParams.isActive == false && shares > 0) {
             initMultiAssetVaultParams.isActive = true;
         }
     }
