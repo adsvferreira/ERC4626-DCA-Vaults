@@ -15,6 +15,8 @@ import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
+error InvalidParameters(string message);
+
 contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     event VaultCreated(
         address indexed creator,
@@ -34,9 +36,9 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     uint256 public treasuryPercentageFeeOnBalanceUpdate; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
 
     address[] private _allVaults;
-    mapping(address => address[]) public getUserVaults;
+    mapping(address => address[]) private _userVaults;
 
-    IUniswapV2Factory uniswapV2Factory;
+    IUniswapV2Factory public uniswapV2Factory;
 
     constructor(
         address _uniswapV2Factory,
@@ -228,7 +230,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             "Null Address is not a valid newVault address"
         );
         // 2 vaults can't the same address, tx would revert at vault instantiation
-        getUserVaults[creator].push(newVault);
+        _userVaults[creator].push(newVault);
     }
 
     function _buyPercentagesSum(
@@ -238,5 +240,29 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             require(buyPercentages[i] > 0, "Buy percentage must be gt zero");
             buyPercentagesSum += buyPercentages[i];
         }
+    }
+
+    function getAllVaults(
+        uint256 limit,
+        uint256 startAfter
+    ) public view returns (address[] memory) {
+        if (limit + startAfter > _allVaults.length) {
+            revert InvalidParameters(
+                "limit + startAfter exceed the number of vaults."
+            );
+        }
+        address[] memory vaults = new address[](startAfter + limit);
+        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
+        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+            vaults[counter] = _allVaults[i];
+            counter += 1;
+        }
+        return vaults;
+    }
+
+    function getUserVaults(
+        address user
+    ) public view returns (address[] memory) {
+        return _userVaults[user];
     }
 }

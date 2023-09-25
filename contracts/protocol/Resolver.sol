@@ -14,9 +14,9 @@ import {AutomatedVaultERC4626} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
 contract Resolver {
-    IAutomatedVaultsFactory automatedVaultsFactory;
+    IAutomatedVaultsFactory public automatedVaultsFactory;
 
-    address strategyWorkerAddress;
+    address public strategyWorkerAddress;
 
     constructor(
         address _automatedVaultsFactoryAddress,

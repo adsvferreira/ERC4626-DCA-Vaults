@@ -90,7 +90,7 @@ def test_create_new_vault(configs, deposit_token):
     )  # gas price is 0 in local forked testnet
     # Assert
     assert vaults_factory.allVaultsLength() == 1
-    assert bool(vaults_factory.getUserVaults(dev_wallet, 0))
+    assert bool(vaults_factory.getUserVaults(dev_wallet))
     assert treasury_vault_initial_native_balance == 0
     assert treasury_vault_initial_erc20_balance == 0
     assert treasury_vault_final_native_balance == configs["treasury_fixed_fee_on_vault_creation"]
