@@ -849,6 +849,50 @@ def test_set_last_update_by_not_worker_address():
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
+def test_get_all_vaults(configs):
+    check_network_is_mainnet_fork()
+    vaults_factory = AutomatedVaultsFactory[-1]
+    __create_x_vaults(configs, vaults_factory, 3, dev_wallet)
+    assert(len(vaults_factory.getAllVaults(vaults_factory.allVaultsLength(), 0)) == vaults_factory.allVaultsLength())
+
+def test_get_all_vaults_with_offset():
+    check_network_is_mainnet_fork()
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_requested_vaults = 2
+    assert(len(vaults_factory.getAllVaults(2, 1)) == n_requested_vaults)
+
+def test_get_all_vaults_with_limit_bigger_than_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength()
+    # Act / Assert
+    with reverts():
+        vaults = vaults_factory.getAllVaults(n_vaults+1, 0)
+
+def test_get_all_vaults_with_start_after_bigger_than_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength()
+    # Act / Assert
+    with reverts():
+        vaults_factory.getAllVaults(1, n_vaults+1)
+
+def test_get_all_vaults_with_invalid_limit_with_start_after():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength() 
+    # Act / Assert
+    with reverts():
+        vaults_factory.getAllVaults(vaults_factory.allVaultsLength()-1, 2)
+
+def test_user_with_vaults_return_vaults(configs):
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = 3
+    __create_x_vaults(configs, vaults_factory, n_vaults, dev_wallet2)
+    assert(len(vaults_factory.getUserVaults(dev_wallet2.address)) == n_vaults)
+
+def test_user_without_vault_returns_no_vaults():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    assert(len(vaults_factory.getUserVaults(empty_wallet.address)) == 0)
+
+
 
 ################################ Helper Functions ################################
 
@@ -882,4 +926,18 @@ def __get_init_vault_params(configs: dict, wallet_address: str) -> tuple:
         configs["buy_token_addresses"],
         configs["creator_percentage_fee_on_deposit"],
         configs["treasury_percentage_fee_on_balance_update"],
+    )
+
+def __create_x_vaults(configs: dict, vaults_factory: AutomatedVaultsFactory, n_vaults: int, wallet_address: object):
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    # Create a few vaults
+    n_vaults = 3
+    for i in range(n_vaults):
+        vaults_factory.createVault(
+        init_vault_from_factory_params,
+        strategy_params,
+        {"from": wallet_address, "value": configs["treasury_fixed_fee_on_vault_creation"]},
     )

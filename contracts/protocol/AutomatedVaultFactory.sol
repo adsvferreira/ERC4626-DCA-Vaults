@@ -251,7 +251,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 "limit + startAfter exceed the number of vaults."
             );
         }
-        address[] memory vaults = new address[](startAfter + limit);
+        address[] memory vaults = new address[](limit);
         uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
         for (uint256 i = startAfter; i < startAfter + limit; i++) {
             vaults[counter] = _allVaults[i];
