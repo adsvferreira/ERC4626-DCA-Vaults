@@ -1,6 +1,12 @@
 import pytest
 from typing import Tuple
-from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault, perc_mul_contracts_simulate
+from helpers import (
+    get_account_from_pk,
+    check_network_is_mainnet_fork,
+    get_strategy_vault,
+    perc_mul_contracts_simulate,
+    NULL_ADDRESS,
+)
 from scripts.deploy import (
     deploy_treasury_vault,
     deploy_controller,
@@ -38,8 +44,6 @@ DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 10_000
 
 GT_BALANCE_TESTING_VALUE = 999_999_999_999_999_999_999_999_999_999
 NEGATIVE_AMOUNT_TESTING_VALUE = -1
-
-NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 ################################ Contract Actions ################################
 

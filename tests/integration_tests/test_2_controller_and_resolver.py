@@ -2,7 +2,13 @@ import time
 import pytest
 from typing import List
 from scripts.deploy import deploy_resolver
-from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault, perc_mul_contracts_simulate
+from helpers import (
+    get_account_from_pk,
+    check_network_is_mainnet_fork,
+    get_strategy_vault,
+    perc_mul_contracts_simulate,
+    NULL_ADDRESS,
+)
 from brownie import (
     Resolver,
     Controller,
@@ -275,6 +281,44 @@ def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_allowance_
         )
 
 
+def test_trigger_strategy_action_with_invalid_worker_address():
+    controller = Controller[-1]
+    invalid_worker_address = config["networks"][network.show_active()]["treasury_address"]
+    strategy_vault = get_strategy_vault()
+    strategy_vault_address = strategy_vault.address
+    # Act / Assert
+    strategy_vault.approve(
+        invalid_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
+    )
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            invalid_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
+        )
+
+
+def test_trigger_strategy_action_with_invalid_vault_address():
+    controller = Controller[-1]
+    strategy_worker_address = StrategyWorker[-1].address
+    invalid_vault_address = config["networks"][network.show_active()]["treasury_address"]
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            strategy_worker_address, invalid_vault_address, dev_wallet2, {"from": dev_wallet}
+        )
+
+
+def test_trigger_strategy_action_with_null_depositor_address():
+    controller = Controller[-1]
+    strategy_worker_address = StrategyWorker[-1].address
+    strategy_vault = get_strategy_vault()
+    strategy_vault_address = strategy_vault.address
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        controller.triggerStrategyAction(
+            strategy_worker_address, strategy_vault_address, NULL_ADDRESS, {"from": dev_wallet}
+        )
+
+
 def test_add_address_to_whitelist_by_non_owner():
     check_network_is_mainnet_fork()
     # Arrange
@@ -317,6 +361,17 @@ def test_del_owner_from_whitelist_by_non_owner():
         controller.delWhitelistedCaller(dev_wallet, {"from": dev_wallet2})
     except exceptions.VirtualMachineError as e:
         assert "caller is not the owner" in str(e)
+
+
+def test_add_null_address_to_whitelist_by_owner():
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    # Act/Assert
+    try:
+        controller.setWhitelistedCaller(NULL_ADDRESS, {"from": dev_wallet})
+    except exceptions.VirtualMachineError as e:
+        assert "Null Address is not a valid whitelisted caller address" in str(e)
 
 
 ################################ Helper Functions ################################

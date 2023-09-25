@@ -10,6 +10,8 @@ DEV_WALLET_ERC20_AMOUNT_TO_SEND = 1
 DEV_WALLET_NATIVE_AMOUNT_TO_WITHDRAW = 1
 DEV_WALLET_ERC20_AMOUNT_TO_WITHDRAW = 1
 
+NEGATIVE_AMOUNT_TESTING_VALUE = -1
+
 ################################ Contract Actions ################################
 
 
@@ -92,6 +94,31 @@ def test_withdraw_erc20_by_owner(deposit_token):
     )
 
 
+def test_withdraw_native_amount_eq_zero_by_owner():
+    check_network_is_mainnet_fork()
+    # Arrange
+    treasury_vault = TreasuryVault[-1]
+    initial_treasury_vault_native_balance = treasury_vault.balance()
+    # Act
+    treasury_vault.withdrawNative(0, {"from": dev_wallet})
+    final_treasury_vault_native_balance = treasury_vault.balance()
+    # Assert
+    assert initial_treasury_vault_native_balance == final_treasury_vault_native_balance
+
+
+def test_withdraw_erc20_amount_eq_zero_by_owner(deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    treasury_vault = TreasuryVault[-1]
+    treasury_vault_address = treasury_vault.address
+    initial_treasury_vault_deposit_token_balance = deposit_token.balanceOf(treasury_vault_address)
+    # Act
+    treasury_vault.withdrawERC20(deposit_token.address, 0, {"from": dev_wallet})
+    final_treasury_vault_deposit_token_balance = deposit_token.balanceOf(treasury_vault_address)
+    # Assert
+    assert initial_treasury_vault_deposit_token_balance == final_treasury_vault_deposit_token_balance
+
+
 ################################ Contract Validations ################################
 
 
@@ -134,3 +161,21 @@ def test_withdraw_erc20_amount_gt_total_balance_by_owner(deposit_token):
         treasury_vault.withdrawERC20(
             deposit_token.address, treasury_vault_deposit_token_balance + 1, {"from": dev_wallet}
         )
+
+
+def test_withdraw_native_amount_lt_zero_by_owner():
+    check_network_is_mainnet_fork()
+    # Arrange
+    treasury_vault = TreasuryVault[-1]
+    # Act / Assert
+    with pytest.raises(OverflowError):
+        treasury_vault.withdrawNative(NEGATIVE_AMOUNT_TESTING_VALUE, {"from": dev_wallet})
+
+
+def test_withdraw_erc20_amount_lt_zero_by_owner(deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    treasury_vault = TreasuryVault[-1]
+    # Act / Assert
+    with pytest.raises(OverflowError):
+        treasury_vault.withdrawERC20(deposit_token.address, NEGATIVE_AMOUNT_TESTING_VALUE, {"from": dev_wallet})

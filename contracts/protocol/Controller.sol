@@ -41,6 +41,10 @@ contract Controller is IController, Ownable {
     function setWhitelistedCaller(
         address whitelistedCaller
     ) external onlyOwner {
+        require(
+            whitelistedCaller != address(0),
+            "Null Address is not a valid whitelisted caller address"
+        );
         whitelistedCallers[whitelistedCaller] = true;
     }
 

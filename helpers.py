@@ -2,6 +2,8 @@ import pytest
 from math import floor
 from brownie import AutomatedVaultERC4626, AutomatedVaultsFactory, accounts, config, network
 
+NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 
 def get_account_from_pk(index: int) -> object:
     return accounts.add(config["wallets"][f"from_key_{index}"])
