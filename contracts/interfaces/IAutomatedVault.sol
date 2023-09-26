@@ -26,6 +26,10 @@ interface IAutomatedVault {
         address depositor
     ) external view returns (uint256[] memory);
 
+    function getDepositorTotalPeriodicBuyAmount(
+        address depositor
+    ) external view returns (uint256);
+
     function getUpdateFrequencyTimestamp() external view returns (uint256);
 
     function lastUpdateOf(address depositor) external view returns (uint256);

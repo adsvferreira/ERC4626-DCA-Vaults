@@ -40,9 +40,11 @@ def test_resolver_checker_before_controller_first_action():
     automated_vaults_factory_address = AutomatedVaultsFactory[-1].address
     controller = Controller[-1]
     first_deployed_vault_address = AutomatedVaultERC4626[0].address
+    # First expected_decoded_payload is for the second depositor (dev_wallet2) because
+    # first depositor (dev_wallet) hasn't enough balance for the next swap at this point.
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, first_deployed_vault_address, dev_wallet.address],
+        [strategy_worker_address, first_deployed_vault_address, dev_wallet2.address],
     )
     # Act
     resolver = deploy_resolver(dev_wallet, verify_flag, automated_vaults_factory_address, strategy_worker_address)
@@ -118,12 +120,10 @@ def test_resolver_checker_after_controller_first_action():
     # Arrange
     strategy_worker_address = StrategyWorker[-1].address
     controller = Controller[-1]
-    first_deployed_vault_address = AutomatedVaultERC4626[0].address
-    # Strill returns payload for dev_wallet execution because was the first depositor and
-    # controller executed an action for dev_wallet2
+    second_deployed_vault_address = AutomatedVaultERC4626[1].address
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, first_deployed_vault_address, dev_wallet.address],
+        [strategy_worker_address, second_deployed_vault_address, dev_wallet2.address],
     )
     resolver = Resolver[-1]
     # Act

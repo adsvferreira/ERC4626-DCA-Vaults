@@ -152,6 +152,17 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         return _depositorBuyAmounts[depositor];
     }
 
+    function getDepositorTotalPeriodicBuyAmount(
+        address depositor
+    ) external view returns (uint256 totalPeriodicBuyAmount) {
+        if (_depositorBuyAmounts[depositor].length == 0){
+            return 0;
+        }
+        for (uint256 i = 0; i < buyAssetsLength; i++) {
+            totalPeriodicBuyAmount += _depositorBuyAmounts[depositor][i];
+        }
+    }
+
     function getUpdateFrequencyTimestamp()
         external
         view

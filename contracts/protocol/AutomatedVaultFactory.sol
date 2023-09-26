@@ -35,6 +35,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     address[] private _allVaults;
     mapping(address => address[]) public getUserVaults;
+    mapping(address => address[]) private _vaultsPerStrategyWorker;
 
     IUniswapV2Factory uniswapV2Factory;
 
@@ -93,6 +94,9 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         );
         newVaultAddress = address(newVault);
         _allVaults.push(newVaultAddress);
+        _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
+            newVaultAddress
+        );
         _addUserVault(initMultiAssetVaultParams.creator, newVaultAddress);
         emit VaultCreated(
             initMultiAssetVaultParams.creator,
@@ -140,6 +144,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         uint256 i
     ) external view virtual returns (address) {
         return _allVaults[i];
+    }
+
+    function getAllVaultsPerStrategyWorker(
+        address strategyWorker
+    ) external view returns (address[] memory) {
+        return _vaultsPerStrategyWorker[strategyWorker];
     }
 
     function _validateCreateVaultInputs(

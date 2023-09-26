@@ -23,4 +23,8 @@ interface IAutomatedVaultsFactory {
     ) external view returns (bool);
 
     function getVaultAddress(uint256 i) external view returns (address);
+
+    function getAllVaultsPerStrategyWorker(
+        address strategyWorker
+    ) external view returns (address[] memory);
 }
