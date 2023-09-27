@@ -25,7 +25,6 @@ def configs() -> dict:
         "max_slippage_perc": protocol_params["max_slippage_perc"],
         "buy_percentages": strategy_params["buy_percentages"],
         "buy_frequency": strategy_params["buy_frequency"],
-        "strategy_type": strategy_params["strategy_type"],
         "token_not_paired_with_weth_address": active_network_configs["token_not_paired_with_weth_address"],
         "too_many_buy_token_addresses": active_network_configs["too_many_buy_token_addresses"],
     }

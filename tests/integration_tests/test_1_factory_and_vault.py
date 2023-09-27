@@ -94,7 +94,7 @@ def test_create_new_vault(configs, deposit_token):
     )  # gas price is 0 in local forked testnet
     # Assert
     assert vaults_factory.allVaultsLength() == 1
-    assert vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[3]) == [get_strategy_vault().address]
+    assert vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2]) == [get_strategy_vault().address]
     assert bool(vaults_factory.getUserVaults(dev_wallet, 0))
     assert treasury_vault_initial_native_balance == 0
     assert treasury_vault_initial_erc20_balance == 0
@@ -140,14 +140,12 @@ def test_created_vault_strategy_params(configs):
     (
         buy_percentages,
         buy_frequency,
-        strategy_type,
         _,
     ) = strategy_vault.getStrategyParams()
     # Act
     # Assert
     assert buy_percentages == configs["buy_percentages"]
     assert buy_frequency == configs["buy_frequency"]
-    assert strategy_type == configs["strategy_type"]
 
 
 def test_created_vault_buy_tokens(configs):
@@ -307,7 +305,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
         strategy_params,
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
-    initial_vaults_per_strategy_worker = list(vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[3]))
+    initial_vaults_per_strategy_worker = list(vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2]))
     vaults_factory.createVault(
         init_vault_from_factory_params,
         strategy_params,
@@ -340,7 +338,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
         {"from": dev_wallet2},
     )
     strategy_vault.deposit(DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, dev_wallet2.address, {"from": dev_wallet2})
-    final_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[3])
+    final_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2])
     expected_final_vaults_per_strategy_worker = list(initial_vaults_per_strategy_worker) + [
         get_strategy_vault(1).address
     ]
@@ -393,7 +391,7 @@ def test_owner_zero_value_deposit(configs):
         strategy_params,
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
-    initial_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[3])
+    initial_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2])
     vaults_factory.createVault(
         init_vault_from_factory_params,
         strategy_params,
@@ -408,7 +406,7 @@ def test_owner_zero_value_deposit(configs):
     initial_wallet_buy_amounts = strategy_vault3.getDepositorBuyAmounts(dev_wallet)
     initial_depositor_total_periodic_buy_amount = strategy_vault3.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     strategy_vault3.deposit(0, dev_wallet.address, {"from": dev_wallet})
-    final_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[3])
+    final_vaults_per_strategy_worker = vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2])
     expected_final_vaults_per_strategy_worker = list(initial_vaults_per_strategy_worker) + [
         get_strategy_vault(2).address
     ]
@@ -832,27 +830,6 @@ def test_create_strategy_with_invalid_buy_frequency_enum_value(configs):
     strategy_params[1] = old_buy_frequency_enum_value
 
 
-def test_create_strategy_with_invalid_strategy_type_enum_value(configs):
-    check_network_is_mainnet_fork()
-    # Arrange
-    vaults_factory = AutomatedVaultsFactory[-1]
-    (
-        strategy_params,
-        init_vault_from_factory_params,
-    ) = __get_default_strategy_and_init_vault_params(configs)
-    strategy_params = list(strategy_params)
-    old_buy_frequency_enum_value = strategy_params[2]
-    strategy_params[2] = 99
-    # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
-        vaults_factory.createVault(
-            init_vault_from_factory_params,
-            strategy_params,
-            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
-        )
-    strategy_params[2] = old_buy_frequency_enum_value
-
-
 def test_create_strategy_with_null_strategy_worker_address(configs):
     check_network_is_mainnet_fork()
     # Arrange
@@ -862,8 +839,8 @@ def test_create_strategy_with_null_strategy_worker_address(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     strategy_params = list(strategy_params)
-    old_buy_frequency_enum_value = strategy_params[3]
-    strategy_params[3] = NULL_ADDRESS
+    old_buy_frequency_enum_value = strategy_params[2]
+    strategy_params[2] = NULL_ADDRESS
     # Act / Assert
     with reverts("strategyWorker address cannot be zero address"):
         vaults_factory.createVault(
@@ -871,7 +848,7 @@ def test_create_strategy_with_null_strategy_worker_address(configs):
             strategy_params,
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
         )
-    strategy_params[3] = old_buy_frequency_enum_value
+    strategy_params[2] = old_buy_frequency_enum_value
 
 
 def test_set_last_update_by_not_worker_address():
@@ -897,7 +874,6 @@ def __get_default_strategy_and_init_vault_params(configs: dict) -> Tuple[Tuple, 
     strategy_params = (
         configs["buy_percentages"],
         configs["buy_frequency"],
-        configs["strategy_type"],
         worker_address,
     )
     return strategy_params, init_vault_from_factory_params

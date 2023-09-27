@@ -35,7 +35,6 @@ library ConfigTypes {
     struct StrategyParams {
         uint256[] buyPercentages;
         Enums.BuyFrequency buyFrequency;
-        Enums.StrategyType strategyType;
         address strategyWorker;
     }
 }

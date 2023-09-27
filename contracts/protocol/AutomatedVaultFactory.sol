@@ -22,8 +22,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         address[] buyAssets,
         address vaultAddress,
         uint256[] buyPercentages,
-        Enums.BuyFrequency buyFrequency,
-        Enums.StrategyType strategyType
+        Enums.BuyFrequency buyFrequency
     );
     event TreasuryFeeTransfered(address creator, uint256 amount);
 
@@ -104,8 +103,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             initMultiAssetVaultFactoryParams.buyAssets,
             newVaultAddress,
             strategyParams.buyPercentages,
-            strategyParams.buyFrequency,
-            strategyParams.strategyType
+            strategyParams.buyFrequency
         );
     }
 
