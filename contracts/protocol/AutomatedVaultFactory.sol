@@ -10,7 +10,7 @@ pragma solidity 0.8.21;
 
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
-import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";

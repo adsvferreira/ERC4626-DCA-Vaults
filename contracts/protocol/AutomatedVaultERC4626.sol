@@ -66,9 +66,6 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
         uint256 max
     );
 
-    /**
-     * @dev Underlying asset contracts must be ERC20-compatible contracts (ERC20 or ERC777) whitelisted at factory level.
-     */
     constructor(
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams,
         ConfigTypes.StrategyParams memory _strategyParams
@@ -155,7 +152,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
     function getDepositorTotalPeriodicBuyAmount(
         address depositor
     ) external view returns (uint256 totalPeriodicBuyAmount) {
-        if (_depositorBuyAmounts[depositor].length == 0){
+        if (_depositorBuyAmounts[depositor].length == 0) {
             return 0;
         }
         for (uint256 i = 0; i < buyAssetsLength; i++) {

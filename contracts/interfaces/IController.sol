@@ -7,8 +7,4 @@ interface IController {
         address strategyVaultAddress,
         address depositorAddress
     ) external;
-
-    function setWhitelistedCaller(address whitelistedCaller) external;
-
-    function delWhitelistedCaller(address whitelistedCaller) external;
 }
