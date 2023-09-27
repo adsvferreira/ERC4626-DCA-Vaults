@@ -10,7 +10,7 @@ pragma solidity 0.8.21;
 
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
-import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
@@ -24,8 +24,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         address[] buyAssets,
         address vaultAddress,
         uint256[] buyPercentages,
-        Enums.BuyFrequency buyFrequency,
-        Enums.StrategyType strategyType
+        Enums.BuyFrequency buyFrequency
     );
     event TreasuryFeeTransfered(address creator, uint256 amount);
 
@@ -95,6 +94,9 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         );
         newVaultAddress = address(newVault);
         _allVaults.push(newVaultAddress);
+        _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
+            newVaultAddress
+        );
         _addUserVault(initMultiAssetVaultParams.creator, newVaultAddress);
         emit VaultCreated(
             initMultiAssetVaultParams.creator,
@@ -102,8 +104,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             initMultiAssetVaultFactoryParams.buyAssets,
             newVaultAddress,
             strategyParams.buyPercentages,
-            strategyParams.buyFrequency,
-            strategyParams.strategyType
+            strategyParams.buyFrequency
         );
     }
 
@@ -142,6 +143,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         uint256 i
     ) external view virtual returns (address) {
         return _allVaults[i];
+    }
+
+    function getAllVaultsPerStrategyWorker(
+        address strategyWorker
+    ) external view returns (address[] memory) {
+        return _vaultsPerStrategyWorker[strategyWorker];
     }
 
     function _validateCreateVaultInputs(

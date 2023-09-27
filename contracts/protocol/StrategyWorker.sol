@@ -9,17 +9,19 @@ pragma solidity 0.8.21;
  *          DATE:    2023.08.29
 */
 
+import {Roles} from "../libraries/roles/Roles.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
-import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract StrategyWorker is IStrategyWorker {
+contract StrategyWorker is IStrategyWorker, AccessControl {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using PercentageMath for uint256;
@@ -48,17 +50,13 @@ contract StrategyWorker is IStrategyWorker {
         dexRouter = _dexRouter;
         dexMainToken = _dexMainToken;
         controller = _controller;
-    }
-
-    modifier onlyController() {
-        require(msg.sender == controller, "Only controller can call this");
-        _;
+        _setupRole(Roles.CONTROLLER, _controller);
     }
 
     function executeStrategyAction(
         address strategyVaultAddress,
         address depositorAddress
-    ) external onlyController {
+    ) external onlyRole(Roles.CONTROLLER) {
         AutomatedVaultERC4626 strategyVault = AutomatedVaultERC4626(
             strategyVaultAddress
         );
@@ -81,10 +79,6 @@ contract StrategyWorker is IStrategyWorker {
             memory initMultiAssetVaultParams = strategyVault
                 .getInitMultiAssetVaultParams();
 
-        uint256 actionFeePercentage = initMultiAssetVaultParams
-            .treasuryPercentageFeeOnBalanceUpdate;
-        address payable protocolTreasuryAddress = initMultiAssetVaultParams
-            .treasury;
         uint256 amountToWithdraw;
         uint256[] memory buyAmountsAfterFee;
         uint256 totalFee;
@@ -93,7 +87,10 @@ contract StrategyWorker is IStrategyWorker {
             amountToWithdraw,
             buyAmountsAfterFee,
             totalFee
-        ) = _calculateAmountsAfterFee(buyAmounts, actionFeePercentage);
+        ) = _calculateAmountsAfterFee(
+            buyAmounts,
+            initMultiAssetVaultParams.treasuryPercentageFeeOnBalanceUpdate
+        );
 
         uint256 totalBuyAmount = amountToWithdraw - totalFee;
 
@@ -105,7 +102,10 @@ contract StrategyWorker is IStrategyWorker {
             depositorAddress //owner
         );
 
-        address[2] memory spenders = [dexRouter, protocolTreasuryAddress];
+        address[2] memory spenders = [
+            dexRouter,
+            initMultiAssetVaultParams.treasury
+        ];
         _ensureApprovedERC20(depositAsset, spenders);
 
         uint256[] memory swappedAssetAmounts = _swapTokens(
@@ -115,7 +115,7 @@ contract StrategyWorker is IStrategyWorker {
             buyAmountsAfterFee
         );
 
-        ITreasuryVault(protocolTreasuryAddress).depositERC20(
+        ITreasuryVault(initMultiAssetVaultParams.treasury).depositERC20(
             totalFee,
             depositAsset
         );

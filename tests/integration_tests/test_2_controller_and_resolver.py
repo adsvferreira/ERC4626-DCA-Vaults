@@ -16,6 +16,7 @@ from brownie import (
     StrategyWorker,
     AutomatedVaultERC4626,
     AutomatedVaultsFactory,
+    web3,
     config,
     reverts,
     network,
@@ -29,6 +30,8 @@ dev_wallet2 = get_account_from_pk(2)
 DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT = 9_999_999_999_999_999_999
 DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 20_000
 
+CONTROLLER_CALLER_BYTES_ROLE = web3.keccak(text="CONTROLLER_CALLER")
+
 ################################ Contract Actions ################################
 
 
@@ -40,9 +43,11 @@ def test_resolver_checker_before_controller_first_action():
     automated_vaults_factory_address = AutomatedVaultsFactory[-1].address
     controller = Controller[-1]
     first_deployed_vault_address = AutomatedVaultERC4626[0].address
+    # First expected_decoded_payload is for the second depositor (dev_wallet2) because
+    # first depositor (dev_wallet) hasn't enough balance for the next swap at this point.
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, first_deployed_vault_address, dev_wallet.address],
+        [strategy_worker_address, first_deployed_vault_address, dev_wallet2.address],
     )
     # Act
     resolver = deploy_resolver(dev_wallet, verify_flag, automated_vaults_factory_address, strategy_worker_address)
@@ -118,12 +123,10 @@ def test_resolver_checker_after_controller_first_action():
     # Arrange
     strategy_worker_address = StrategyWorker[-1].address
     controller = Controller[-1]
-    first_deployed_vault_address = AutomatedVaultERC4626[0].address
-    # Strill returns payload for dev_wallet execution because was the first depositor and
-    # controller executed an action for dev_wallet2
+    second_deployed_vault_address = AutomatedVaultERC4626[1].address
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, first_deployed_vault_address, dev_wallet.address],
+        [strategy_worker_address, second_deployed_vault_address, dev_wallet2.address],
     )
     resolver = Resolver[-1]
     # Act
@@ -190,7 +193,7 @@ def test_trigger_strategy_action_before_next_valid_timestamp():
         )
 
 
-def test_trigger_strategy_action_by_non_whitelisted_address():
+def test_trigger_strategy_action_by_address_without_controller_role():
     check_network_is_mainnet_fork()
     # Arrange
     controller = Controller[-1]
@@ -198,13 +201,15 @@ def test_trigger_strategy_action_by_non_whitelisted_address():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with reverts("FORBIDDEN"):
+    try:
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
+    except exceptions.VirtualMachineError as e:
+        assert "is missing role" in str(e)
 
 
-def test_add_address_to_whitelist():
+def test_add_controller_role_to_address():
     check_network_is_mainnet_fork()
     # Arrange
     controller = Controller[-1]
@@ -212,7 +217,7 @@ def test_add_address_to_whitelist():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act
-    controller.setWhitelistedCaller(dev_wallet2, {"from": dev_wallet})
+    controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
     try:
         controller.triggerStrategyAction(
@@ -220,11 +225,11 @@ def test_add_address_to_whitelist():
         )
     except exceptions.VirtualMachineError as e:
         # Transaction should fail because all created vaults were already updated in a previous test
-        assert "FORBIDDEN" not in str(e)
-    assert controller.whitelistedCallers(dev_wallet) == True
+        assert "is missing role" not in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
-def test_del_address_from_whitelist():
+def test_remove_controller_role_from_address():
     check_network_is_mainnet_fork()
     # Arrange
     controller = Controller[-1]
@@ -232,15 +237,15 @@ def test_del_address_from_whitelist():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act
-    controller.delWhitelistedCaller(dev_wallet2, {"from": dev_wallet})
+    controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
     try:
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
     except exceptions.VirtualMachineError as e:
-        assert "FORBIDDEN" in str(e)
-    assert controller.whitelistedCallers(dev_wallet) == True
+        assert "is missing role" in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
 ################################ Contract Validations ################################
@@ -319,59 +324,54 @@ def test_trigger_strategy_action_with_null_depositor_address():
         )
 
 
-def test_add_address_to_whitelist_by_non_owner():
+def test_add_controller_role_to_address_by_non_admin():
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    # Act/Assert
+    controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
+    try:
+        controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
+    except exceptions.VirtualMachineError as e:
+        assert "is missing role" in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == False
+
+
+def test_remove_controller_role_from_address_by_non_admin():
+    check_network_is_mainnet_fork()
+    # Arrange
+    controller = Controller[-1]
+    # Act/Assert
+    controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
+    try:
+        controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
+    except exceptions.VirtualMachineError as e:
+        assert "is missing role" in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == True
+
+
+def test_remove_controller_role_from_admin_by_non_admin():
     check_network_is_mainnet_fork()
     # Arrange
     controller = Controller[-1]
     # Act/Assert
     try:
-        controller.setWhitelistedCaller(dev_wallet2, {"from": dev_wallet2})
+        controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet, {"from": dev_wallet2})
     except exceptions.VirtualMachineError as e:
-        assert "caller is not the owner" in str(e)
+        assert "is missing role" in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
-def test_del_address_from_whitelist_by_non_owner():
+def test_add_controller_role_to_null_address_by_non_admin():
     check_network_is_mainnet_fork()
     # Arrange
     controller = Controller[-1]
     # Act/Assert
     try:
-        controller.delWhitelistedCaller(dev_wallet2, {"from": dev_wallet2})
+        controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS, {"from": dev_wallet2})
     except exceptions.VirtualMachineError as e:
-        assert "caller is not the owner" in str(e)
-
-
-def test_del_owner_from_whitelist_by_owner():
-    check_network_is_mainnet_fork()
-    # Arrange
-    controller = Controller[-1]
-    # Act/Assert
-    try:
-        controller.delWhitelistedCaller(dev_wallet, {"from": dev_wallet})
-    except exceptions.VirtualMachineError as e:
-        assert "Owner cannot be removed" in str(e)
-
-
-def test_del_owner_from_whitelist_by_non_owner():
-    check_network_is_mainnet_fork()
-    # Arrange
-    controller = Controller[-1]
-    # Act/Assert
-    try:
-        controller.delWhitelistedCaller(dev_wallet, {"from": dev_wallet2})
-    except exceptions.VirtualMachineError as e:
-        assert "caller is not the owner" in str(e)
-
-
-def test_add_null_address_to_whitelist_by_owner():
-    check_network_is_mainnet_fork()
-    # Arrange
-    controller = Controller[-1]
-    # Act/Assert
-    try:
-        controller.setWhitelistedCaller(NULL_ADDRESS, {"from": dev_wallet})
-    except exceptions.VirtualMachineError as e:
-        assert "Null Address is not a valid whitelisted caller address" in str(e)
+        assert "is missing role" in str(e)
+    assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS) == False
 
 
 ################################ Helper Functions ################################

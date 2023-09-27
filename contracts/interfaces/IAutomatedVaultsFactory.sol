@@ -27,7 +27,13 @@ interface IAutomatedVaultsFactory {
     function getAllVaults(
         uint256 limit,
         uint256 startAfter
-    ) external view returns (address[]);
+    ) external view returns (address[] memory);
 
-    function getUserVaults(address user) external view returns (address[]);
+    function getUserVaults(
+        address user
+    ) external view returns (address[] memory);
+
+    function getAllVaultsPerStrategyWorker(
+        address strategyWorker
+    ) external view returns (address[] memory);
 }

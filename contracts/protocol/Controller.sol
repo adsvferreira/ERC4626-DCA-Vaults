@@ -9,49 +9,26 @@ pragma solidity 0.8.21;
  *          DATE:    2023.08.29
 */
 
+import {Roles} from "../libraries/roles/Roles.sol";
 import {IController} from "../interfaces/IController.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Controller is IController, Ownable {
-    mapping(address => bool) public whitelistedCallers;
-
+contract Controller is IController, AccessControl {
     constructor() {
-        whitelistedCallers[msg.sender] = true;
-    }
-
-    // Only Callable by Pulsar Deployer EOA Address (Owner) or Gelato Dedicated msg.sender
-    modifier onlyWhitelisted() {
-        require(whitelistedCallers[msg.sender], "FORBIDDEN");
-        _;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(Roles.CONTROLLER_CALLER, msg.sender);
     }
 
     function triggerStrategyAction(
         address strategyWorkerAddress,
         address strategyVaultAddress,
         address depositorAddress
-    ) external onlyWhitelisted {
+    ) external onlyRole(Roles.CONTROLLER_CALLER) {
         IStrategyWorker strategyWorker = IStrategyWorker(strategyWorkerAddress);
         strategyWorker.executeStrategyAction(
             strategyVaultAddress,
             depositorAddress
         );
-    }
-
-    function setWhitelistedCaller(
-        address whitelistedCaller
-    ) external onlyOwner {
-        require(
-            whitelistedCaller != address(0),
-            "Null Address is not a valid whitelisted caller address"
-        );
-        whitelistedCallers[whitelistedCaller] = true;
-    }
-
-    function delWhitelistedCaller(
-        address whitelistedCaller
-    ) external onlyOwner {
-        require(whitelistedCaller != owner(), "Owner cannot be removed");
-        whitelistedCallers[whitelistedCaller] = false;
     }
 }

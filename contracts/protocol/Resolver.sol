@@ -29,14 +29,14 @@ contract Resolver {
     }
 
     function checker() external view returns (bool, bytes memory) {
-        uint256 allVaultsLength = automatedVaultsFactory.allVaultsLength();
+        address[] memory allVaults = automatedVaultsFactory
+            .getAllVaultsPerStrategyWorker(strategyWorkerAddress);
+        uint256 allVaultsLength = allVaults.length;
         bool canExec;
         bytes memory execPayload;
 
         for (uint256 i = 0; i < allVaultsLength; i++) {
-            AutomatedVaultERC4626 vault = AutomatedVaultERC4626(
-                automatedVaultsFactory.getVaultAddress(i)
-            );
+            AutomatedVaultERC4626 vault = AutomatedVaultERC4626(allVaults[i]);
 
             for (uint256 j = 0; j < vault.allDepositorsLength(); j++) {
                 execPayload = abi.encodeWithSelector(
@@ -46,11 +46,14 @@ contract Resolver {
                     vault.allDepositorAddresses(j)
                 );
 
-                canExec =
-                    (block.timestamp >=
-                        (vault.lastUpdateOf(vault.allDepositorAddresses(j)) +
-                            vault.getUpdateFrequencyTimestamp())) ||
-                    vault.lastUpdateOf(vault.allDepositorAddresses(j)) == 0;
+                canExec = _canExec(
+                    vault.lastUpdateOf(vault.allDepositorAddresses(j)),
+                    vault.getUpdateFrequencyTimestamp(),
+                    vault.balanceOf(vault.allDepositorAddresses(j)),
+                    vault.getDepositorTotalPeriodicBuyAmount(
+                        vault.allDepositorAddresses(j)
+                    )
+                );
 
                 if (canExec) {
                     return (canExec, execPayload);
@@ -58,5 +61,16 @@ contract Resolver {
             }
         }
         return (canExec, execPayload);
+    }
+
+    function _canExec(
+        uint256 lastUpdateOf,
+        uint256 updateFrequencyTimestamp,
+        uint256 depositorBalance,
+        uint256 depositorTotalPeriodicBuyAmount
+    ) private view returns (bool) {
+        return (((block.timestamp >=
+            (lastUpdateOf + updateFrequencyTimestamp)) || lastUpdateOf == 0) &&
+            (depositorBalance >= depositorTotalPeriodicBuyAmount));
     }
 }

@@ -89,7 +89,6 @@ networks:
 strategy-params:
   buy_percentages: [500, 500] #5% 5%
   buy_frequency: 0 # Daily
-  strategy_type: 0 # DCA
 protocol-params:
   treasury_fixed_fee_on_vault_creation: 100_000_000_000_000 # Ether amount (0.001)
   creator_percentage_fee_on_deposit: 25 #0.25%
