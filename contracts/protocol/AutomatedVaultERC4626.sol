@@ -11,16 +11,18 @@ pragma solidity 0.8.21;
  *          DATE:    2023.08.13
 */
 
+import {Roles} from "../libraries/roles/Roles.sol";
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
 import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
+contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     using Math for uint256;
     using PercentageMath for uint256;
     using SafeERC20 for IERC20;
@@ -81,19 +83,12 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
             _initMultiAssetVaultParams.buyAssets,
             _strategyParams.buyPercentages
         );
+        _setupRole(Roles.STRATEGY_WORKER, _strategyParams.strategyWorker);
         initMultiAssetVaultParams = _initMultiAssetVaultParams;
         _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
         initMultiAssetVaultParams.isActive = false;
         _fillUpdateFrequenciesMap();
-    }
-
-    modifier onlyStrategyWorker() {
-        require(
-            msg.sender == strategyParams.strategyWorker,
-            "Only StrategyWorker can call this"
-        );
-        _;
     }
 
     /** @dev See {IERC4626-deposit}. */
@@ -113,7 +108,7 @@ contract AutomatedVaultERC4626 is ERC4626, IAutomatedVault {
 
     function setLastUpdatePerDepositor(
         address depositor
-    ) external onlyStrategyWorker {
+    ) external onlyRole(Roles.STRATEGY_WORKER) {
         _lastUpdatePerDepositor[depositor] = block.timestamp;
     }
 
