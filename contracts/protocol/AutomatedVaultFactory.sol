@@ -34,7 +34,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     uint256 public creatorPercentageFeeOnDeposit; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
     uint256 public treasuryPercentageFeeOnBalanceUpdate; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
 
-    address[] private _allVaults;
+    address[] public getVaultAddress;
     mapping(address => address[]) private _userVaults;
     mapping(address => address[]) _vaultsPerStrategyWorker;
 
@@ -57,7 +57,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     }
 
     function allVaultsLength() external view returns (uint256) {
-        return _allVaults.length;
+        return getVaultAddress.length;
     }
 
     function createVault(
@@ -94,7 +94,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams
         );
         newVaultAddress = address(newVault);
-        _allVaults.push(newVaultAddress);
+        getVaultAddress.push(newVaultAddress);
         _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
             newVaultAddress
         );
@@ -140,32 +140,26 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         return false;
     }
 
-    function getVaultAddress(
-        uint256 i
-    ) external view virtual returns (address) {
-        return _allVaults[i];
-    }
-
     function getAllVaultsPerStrategyWorker(
         address strategyWorker
     ) external view returns (address[] memory) {
         return _vaultsPerStrategyWorker[strategyWorker];
     }
 
-    function getAllVaults(
+    function getBatchVaults(
         uint256 limit,
         uint256 startAfter
     ) public view returns (address[] memory) {
         if (
-            startAfter >= _allVaults.length ||
-            limit + startAfter > _allVaults.length
+            startAfter >= getVaultAddress.length ||
+            limit + startAfter > getVaultAddress.length
         ) {
-            revert InvalidParameters("Invalid interval");
+            revert InvalidParameters("Invalid interval.");
         }
         address[] memory vaults = new address[](limit);
         uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
         for (uint256 i = startAfter; i < startAfter + limit; i++) {
-            vaults[counter] = _allVaults[i];
+            vaults[counter] = getVaultAddress[i];
             counter += 1;
         }
         return vaults;

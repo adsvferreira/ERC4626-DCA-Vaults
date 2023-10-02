@@ -94,6 +94,7 @@ def test_create_new_vault(configs, deposit_token):
     )  # gas price is 0 in local forked testnet
     # Assert
     assert vaults_factory.allVaultsLength() == 1
+    assert vaults_factory.getAllVaultsPerStrategyWorker(strategy_params[2]) == [get_strategy_vault().address]
     assert bool(vaults_factory.getUserVaults(dev_wallet))
     assert treasury_vault_initial_native_balance == 0
     assert treasury_vault_initial_erc20_balance == 0
@@ -185,7 +186,7 @@ def test_deposit_owned_vault(configs, deposit_token):
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)[0]
+    depositor_address = strategy_vault.getBatchDepositorAddresses(1, 0)[0]
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
@@ -239,7 +240,7 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    second_depositor_address = strategy_vault.getAllDepositorAddresses(1, 1)[0]
+    second_depositor_address = strategy_vault.getBatchDepositorAddresses(1, 1)[0]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
@@ -348,7 +349,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    first_depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)[0]
+    first_depositor_address = strategy_vault.getBatchDepositorAddresses(1, 0)[0]
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
@@ -869,41 +870,41 @@ def test_get_all_vaults(configs):
     check_network_is_mainnet_fork()
     vaults_factory = AutomatedVaultsFactory[-1]
     __create_x_vaults(configs, vaults_factory, 3, dev_wallet)
-    assert(len(vaults_factory.getAllVaults(vaults_factory.allVaultsLength(), 0)) == vaults_factory.allVaultsLength())
+    assert(len(vaults_factory.getBatchVaults(vaults_factory.allVaultsLength(), 0)) == vaults_factory.allVaultsLength())
 
 def test_get_all_vaults_with_offset():
     check_network_is_mainnet_fork()
     vaults_factory = AutomatedVaultsFactory[-1]
     n_requested_vaults = 2
-    assert(len(vaults_factory.getAllVaults(2, 1)) == n_requested_vaults)
+    assert(len(vaults_factory.getBatchVaults(2, 1)) == n_requested_vaults)
 
 def test_get_all_vaults_with_limit_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
     # Act / Assert
     with reverts():
-        vaults = vaults_factory.getAllVaults(n_vaults+1, 0)
+        vaults = vaults_factory.getBatchVaults(n_vaults+1, 0)
 
 def test_get_all_vaults_with_start_after_equal_to_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
     # Act / Assert
     with reverts():
-        vaults = vaults_factory.getAllVaults(1, n_vaults)
+        vaults = vaults_factory.getBatchVaults(1, n_vaults)
 
 def test_get_all_vaults_with_start_after_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
     # Act / Assert
     with reverts():
-        vaults_factory.getAllVaults(1, n_vaults+1)
+        vaults_factory.getBatchVaults(1, n_vaults+1)
 
 def test_get_all_vaults_with_invalid_limit_with_start_after():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength() 
     # Act / Assert
     with reverts():
-        vaults_factory.getAllVaults(vaults_factory.allVaultsLength()-1, 2)
+        vaults_factory.getBatchVaults(vaults_factory.allVaultsLength()-1, 2)
 
 def test_user_with_vaults_return_vaults(configs):
     vaults_factory = AutomatedVaultsFactory[-1]
@@ -920,14 +921,14 @@ def test_get_all_depositor_addresses():
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    assert(len(vault.getAllDepositorAddresses(depositors_len, 0)) == depositors_len)
+    assert(len(vault.getBatchDepositorAddresses(depositors_len, 0)) == depositors_len)
 
 def test_get_all_depositor_addresses_with_offset():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    assert(len(vault.getAllDepositorAddresses(depositors_len-2, 0)) == depositors_len-2)
+    assert(len(vault.getBatchDepositorAddresses(depositors_len-2, 0)) == depositors_len-2)
 
 def test_get_all_depositors_with_start_after_equal_to_length():
     check_network_is_mainnet_fork()
@@ -935,7 +936,7 @@ def test_get_all_depositors_with_start_after_equal_to_length():
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
     with reverts():
-        vault.getAllDepositorAddresses(0, depositors_len)
+        vault.getBatchDepositorAddresses(0, depositors_len)
 
 def test_get_all_depositor_addresses_with_limit_bigger_than_length():
     check_network_is_mainnet_fork()
@@ -943,7 +944,7 @@ def test_get_all_depositor_addresses_with_limit_bigger_than_length():
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
     with reverts():
-        vault.getAllDepositorAddresses(depositors_len+1, 0)
+        vault.getBatchDepositorAddresses(depositors_len+1, 0)
 
 def test_get_all_depositors_with_start_after_bigger_than_length():
     check_network_is_mainnet_fork()
@@ -951,15 +952,15 @@ def test_get_all_depositors_with_start_after_bigger_than_length():
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
     with reverts():
-        vault.getAllDepositorAddresses(1, depositors_len+1)
+        vault.getBatchDepositorAddresses(1, depositors_len+1)
 
 def test_get_all_depositors_with_invalid_limit_with_start_after():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    with reverts():
-        vault.getAllDepositorAddresses(2, depositors_len-1)
+    with ("Invalid interval."):
+        vault.getBatchDepositorAddresses(2, depositors_len-1)
 
 
 

@@ -22,9 +22,7 @@ interface IAutomatedVaultsFactory {
         address buyAsset
     ) external view returns (bool);
 
-    function getVaultAddress(uint256 i) external view returns (address);
-
-    function getAllVaults(
+    function getBatchVaults(
         uint256 limit,
         uint256 startAfter
     ) external view returns (address[] memory);

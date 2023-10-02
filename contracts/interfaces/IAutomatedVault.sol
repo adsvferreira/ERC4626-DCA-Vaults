@@ -34,10 +34,8 @@ interface IAutomatedVault {
 
     function lastUpdateOf(address depositor) external view returns (uint256);
 
-    function getAllDepositorAddresses(
+    function getBatchDepositorAddresses(
         uint256 limit,
         uint256 startAfter
     ) external view returns (address[] memory);
-
-    function allDepositorAddresses(uint256 i) external view returns (address);
 }
