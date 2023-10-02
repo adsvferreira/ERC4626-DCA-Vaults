@@ -120,7 +120,7 @@ def test_created_vault_init_params(configs):
     ) = strategy_vault.getInitMultiAssetVaultParams()
     # Act
     # Assert
-    assert feesAccruedByCreator == 0
+    assert strategy_vault.feesAccruedByCreator() == 0
     assert name == configs["vault_name"]
     assert symbol == configs["vault_symbol"]
     assert treasury_address == TreasuryVault[-1].address
@@ -185,13 +185,13 @@ def test_deposit_owned_vault(configs, deposit_token):
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)
+    depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)[0]
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     # Assert
-    assert feesAccruedByCreator == 0
+    assert strategy_vault.feesAccruedByCreator() == 0  # The creator doens't get fees from it's own deposit.
     assert initial_wallet_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
@@ -199,7 +199,7 @@ def test_deposit_owned_vault(configs, deposit_token):
     assert initial_wallet_buy_amounts == []
     assert initial_vault_is_active == False
     assert initial_depositor_total_periodic_buy_amount == 0
-    assert depositor_address == dev_wallet
+    assert depositor_address == dev_wallet.address
     assert final_wallet_lp_balance == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT  # Ratio 1:1 lp token/ underlying token
     assert final_vault_lp_supply == DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 1
@@ -239,21 +239,21 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    second_depositor_address = strategy_vault.getAllDepositorAddresses(1, 1)
+    second_depositor_address = strategy_vault.getAllDepositorAddresses(1, 1)[0]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
     final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     # Assert
-    assert feesAccruedByCreator > 0
+    assert strategy_vault.feesAccruedByCreator() == creator_fee_on_deposit
     assert initial_wallet2_lp_balance == 0
     assert initial_initial_wallet2_deposit_balance == 0
     assert initial_wallet2_buy_amounts == []
     assert initial_depositor_total_periodic_buy_amount == 0
     assert final_vault_lp_supply == initial_vault_lp_supply + DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 2
-    assert second_depositor_address == dev_wallet2
+    assert second_depositor_address == dev_wallet2.address
     assert (
         final_wallet2_lp_balance == DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit
     )  # Ratio 1:1 lp token/ underlying token
@@ -348,7 +348,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    first_depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)
+    first_depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)[0]
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
@@ -357,7 +357,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     final_creator_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     # Assert
-    assert feesAccruedByCreator > 0
+    assert strategy_vault.feesAccruedByCreator() == creator_fee_on_deposit
     assert initial_vault_depositors_list_length == 0
     assert initial_wallet2_lp_balance == 0
     assert initial_initial_wallet_deposit_balance == 0
@@ -369,7 +369,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     assert initial_creator_total_periodic_buy_amount == 0
     assert final_vault_lp_supply == initial_vault_lp_supply + DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT
     assert final_vault_depositors_list_length == 2  # Depositor + creator that received fee as lp token
-    assert first_depositor_address == dev_wallet2
+    assert first_depositor_address == dev_wallet2.address
     assert (
         final_wallet2_lp_balance == DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT - creator_fee_on_deposit
     )  # Ratio 1:1 lp token/ underlying token
@@ -420,6 +420,7 @@ def test_owner_zero_value_deposit(configs):
     final_initial_wallet_deposit_balance = strategy_vault3.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault3.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault3.getDepositorTotalPeriodicBuyAmount(dev_wallet)
+    feesAccruedByCreator = strategy_vault3.feesAccruedByCreator()
     # Assert
     assert feesAccruedByCreator == 0
     assert initial_wallet_lp_balance == 0
@@ -466,7 +467,7 @@ def test_non_owner_zero_value_deposit():
     final_wallet1_buy_amounts = strategy_vault3.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault3.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     # Assert
-    feesAccruedByCreator == 0
+    assert strategy_vault3.feesAccruedByCreator() == 0
     assert initial_wallet2_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
@@ -883,6 +884,13 @@ def test_get_all_vaults_with_limit_bigger_than_vault_length():
     with reverts():
         vaults = vaults_factory.getAllVaults(n_vaults+1, 0)
 
+def test_get_all_vaults_with_start_after_equal_to_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength()
+    # Act / Assert
+    with reverts():
+        vaults = vaults_factory.getAllVaults(1, n_vaults)
+
 def test_get_all_vaults_with_start_after_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
@@ -911,36 +919,49 @@ def test_get_all_depositor_addresses():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
-    print(vault.allDepositorsLength())
     depositors_len = vault.allDepositorsLength()
     assert(len(vault.getAllDepositorAddresses(depositors_len, 0)) == depositors_len)
 
-def test_get_all_vaults_with_offset():
+def test_get_all_depositor_addresses_with_offset():
     check_network_is_mainnet_fork()
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_requested_vaults = 2
-    assert(len(vaults_factory.getAllVaults(2, 1)) == n_requested_vaults)
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
+    assert(len(vault.getAllDepositorAddresses(depositors_len-2, 0)) == depositors_len-2)
 
-def test_get_all_vaults_with_limit_bigger_than_vault_length():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = vaults_factory.allVaultsLength()
-    # Act / Assert
+def test_get_all_depositors_with_start_after_equal_to_length():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
     with reverts():
-        vaults = vaults_factory.getAllVaults(n_vaults+1, 0)
+        vault.getAllDepositorAddresses(0, depositors_len)
 
-def test_get_all_vaults_with_start_after_bigger_than_vault_length():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = vaults_factory.allVaultsLength()
-    # Act / Assert
+def test_get_all_depositor_addresses_with_limit_bigger_than_length():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
     with reverts():
-        vaults_factory.getAllVaults(1, n_vaults+1)
+        vault.getAllDepositorAddresses(depositors_len+1, 0)
 
-def test_get_all_vaults_with_invalid_limit_with_start_after():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = vaults_factory.allVaultsLength() 
-    # Act / Assert
+def test_get_all_depositors_with_start_after_bigger_than_length():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
     with reverts():
-        vaults_factory.getAllVaults(vaults_factory.allVaultsLength()-1, 2)
+        vault.getAllDepositorAddresses(1, depositors_len+1)
+
+def test_get_all_depositors_with_invalid_limit_with_start_after():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
+    with reverts():
+        vault.getAllDepositorAddresses(2, depositors_len-1)
+
+
 
 
 ################################ Helper Functions ################################

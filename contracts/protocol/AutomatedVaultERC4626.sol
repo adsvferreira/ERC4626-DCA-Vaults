@@ -22,7 +22,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-error InvalidParameters();
+error InvalidParameters(string message);
 
 contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     using Math for uint256;
@@ -171,6 +171,32 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         address depositor
     ) external view virtual returns (uint256) {
         return _lastUpdatePerDepositor[depositor];
+    }
+
+    function getAllDepositorAddresses(
+        uint256 limit,
+        uint256 startAfter
+    ) public view returns (address[] memory) {
+        if (
+            limit + startAfter > _allDepositorAddresses.length ||
+            startAfter >= _allDepositorAddresses.length
+        ) {
+            revert InvalidParameters("Invalid Parameters");
+        }
+        address[] memory allDepositors_ = new address[](limit);
+        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
+        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+            allDepositors_[counter] = _allDepositorAddresses[i];
+            counter += 1;
+        }
+        return allDepositors_;
+    }
+
+    function allDepositorAddresses(uint256 i) public view returns (address) {
+        if (i >= _allDepositorAddresses.length) {
+            revert InvalidParameters("Invalid parameter");
+        }
+        return _allDepositorAddresses[i];
     }
 
     function _fillUpdateFrequenciesMap() private {
@@ -322,23 +348,5 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
                 )
             );
         }
-    }
-
-    function getAllDepositorAddresses(
-        uint256 limit,
-        uint256 startAfter
-    ) public view returns (address[] memory) {
-        if (limit + startAfter > _allDepositorAddresses.length) {
-            revert InvalidParameters(
-                "limit + startAfter exceed the number of vaults."
-            );
-        }
-        address[] memory allDepositors_ = new address[](limit);
-        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
-        for (uint256 i = startAfter; i < startAfter + limit; i++) {
-            allDepositors_[counter] = _allDepositorAddresses[i];
-            counter += 1;
-        }
-        return allDepositors_;
     }
 }

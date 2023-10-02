@@ -152,6 +152,31 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         return _vaultsPerStrategyWorker[strategyWorker];
     }
 
+    function getAllVaults(
+        uint256 limit,
+        uint256 startAfter
+    ) public view returns (address[] memory) {
+        if (
+            startAfter >= _allVaults.length ||
+            limit + startAfter > _allVaults.length
+        ) {
+            revert InvalidParameters("Invalid interval");
+        }
+        address[] memory vaults = new address[](limit);
+        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
+        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+            vaults[counter] = _allVaults[i];
+            counter += 1;
+        }
+        return vaults;
+    }
+
+    function getUserVaults(
+        address user
+    ) public view returns (address[] memory) {
+        return _userVaults[user];
+    }
+
     function _validateCreateVaultInputs(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             memory initMultiAssetVaultFactoryParams,
@@ -248,29 +273,5 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             require(buyPercentages[i] > 0, "Buy percentage must be gt zero");
             buyPercentagesSum += buyPercentages[i];
         }
-    }
-
-    function getAllVaults(
-        uint256 limit,
-        uint256 startAfter
-    ) public view returns (address[] memory) {
-        if (limit + startAfter > _allVaults.length) {
-            revert InvalidParameters(
-                "limit + startAfter exceed the number of vaults."
-            );
-        }
-        address[] memory vaults = new address[](limit);
-        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
-        for (uint256 i = startAfter; i < startAfter + limit; i++) {
-            vaults[counter] = _allVaults[i];
-            counter += 1;
-        }
-        return vaults;
-    }
-
-    function getUserVaults(
-        address user
-    ) public view returns (address[] memory) {
-        return _userVaults[user];
     }
 }
