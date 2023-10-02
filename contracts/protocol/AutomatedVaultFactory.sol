@@ -36,6 +36,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     address[] private _allVaults;
     mapping(address => address[]) private _userVaults;
+    mapping(address => address[]) _vaultsPerStrategyWorker;
 
     IUniswapV2Factory public uniswapV2Factory;
 

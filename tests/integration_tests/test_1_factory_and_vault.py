@@ -120,6 +120,7 @@ def test_created_vault_init_params(configs):
     ) = strategy_vault.getInitMultiAssetVaultParams()
     # Act
     # Assert
+    assert feesAccruedByCreator == 0
     assert name == configs["vault_name"]
     assert symbol == configs["vault_symbol"]
     assert treasury_address == TreasuryVault[-1].address
@@ -184,12 +185,13 @@ def test_deposit_owned_vault(configs, deposit_token):
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    depositor_address = strategy_vault.allDepositorAddresses(0)
+    depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     # Assert
+    assert feesAccruedByCreator == 0
     assert initial_wallet_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
@@ -237,13 +239,14 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    second_depositor_address = strategy_vault.allDepositorAddresses(1)
+    second_depositor_address = strategy_vault.getAllDepositorAddresses(1, 1)
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
     final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     # Assert
+    assert feesAccruedByCreator > 0
     assert initial_wallet2_lp_balance == 0
     assert initial_initial_wallet2_deposit_balance == 0
     assert initial_wallet2_buy_amounts == []
@@ -345,7 +348,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
     final_vault_lp_supply = strategy_vault.totalSupply()
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
-    first_depositor_address = strategy_vault.allDepositorAddresses(0)
+    first_depositor_address = strategy_vault.getAllDepositorAddresses(1, 0)
     final_vault_is_active = strategy_vault.getInitMultiAssetVaultParams()[5]
     final_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
@@ -354,6 +357,7 @@ def test_balance_of_creator_without_deposit_after_another_wallet_deposit(configs
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     final_creator_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     # Assert
+    assert feesAccruedByCreator > 0
     assert initial_vault_depositors_list_length == 0
     assert initial_wallet2_lp_balance == 0
     assert initial_initial_wallet_deposit_balance == 0
@@ -417,6 +421,7 @@ def test_owner_zero_value_deposit(configs):
     final_wallet_buy_amounts = strategy_vault3.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault3.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     # Assert
+    assert feesAccruedByCreator == 0
     assert initial_wallet_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
@@ -461,6 +466,7 @@ def test_non_owner_zero_value_deposit():
     final_wallet1_buy_amounts = strategy_vault3.getDepositorBuyAmounts(dev_wallet)
     final_depositor_total_periodic_buy_amount = strategy_vault3.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     # Assert
+    feesAccruedByCreator == 0
     assert initial_wallet2_lp_balance == 0
     assert initial_vault_lp_supply == 0
     assert initial_vault_depositors_list_length == 0
@@ -901,6 +907,40 @@ def test_user_without_vault_returns_no_vaults():
     vaults_factory = AutomatedVaultsFactory[-1]
     assert(len(vaults_factory.getUserVaults(empty_wallet.address)) == 0)
 
+def test_get_all_depositor_addresses():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    print(vault.allDepositorsLength())
+    depositors_len = vault.allDepositorsLength()
+    assert(len(vault.getAllDepositorAddresses(depositors_len, 0)) == depositors_len)
+
+def test_get_all_vaults_with_offset():
+    check_network_is_mainnet_fork()
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_requested_vaults = 2
+    assert(len(vaults_factory.getAllVaults(2, 1)) == n_requested_vaults)
+
+def test_get_all_vaults_with_limit_bigger_than_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength()
+    # Act / Assert
+    with reverts():
+        vaults = vaults_factory.getAllVaults(n_vaults+1, 0)
+
+def test_get_all_vaults_with_start_after_bigger_than_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength()
+    # Act / Assert
+    with reverts():
+        vaults_factory.getAllVaults(1, n_vaults+1)
+
+def test_get_all_vaults_with_invalid_limit_with_start_after():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_vaults = vaults_factory.allVaultsLength() 
+    # Act / Assert
+    with reverts():
+        vaults_factory.getAllVaults(vaults_factory.allVaultsLength()-1, 2)
 
 
 ################################ Helper Functions ################################
