@@ -181,7 +181,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             limit + startAfter > getDepositorAddress.length ||
             startAfter >= getDepositorAddress.length
         ) {
-            revert InvalidParameters("Invalid interval.");
+            revert InvalidParameters("Invalid interval");
         }
         address[] memory allDepositors = new address[](limit);
         uint256 counter = 0; // This is needed to copy from a storage array to a memory array.

@@ -1,5 +1,6 @@
 import pytest
 from typing import Tuple
+# from eth_utils.abi import function_abi_to_4byte_selector, collapse_if_tuple
 from helpers import (
     get_account_from_pk,
     check_network_is_mainnet_fork,
@@ -514,6 +515,39 @@ def test_zero_value_withdraw():
     assert final_initial_wallet_deposit_balance == initial_initial_wallet_deposit_balance
     assert final_wallet_buy_amounts == initial_wallet_buy_amounts
 
+def test_user_with_vaults_return_vaults(configs):
+    vaults_factory = AutomatedVaultsFactory[-1]
+    assert(len(vaults_factory.getUserVaults(dev_wallet.address)) > 0)
+
+def test_user_without_vault_returns_no_vaults():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    assert(len(vaults_factory.getUserVaults(empty_wallet.address)) == 0)
+
+def test_get_all_depositor_addresses():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
+    assert(len(vault.getBatchDepositorAddresses(depositors_len, 0)) == depositors_len)
+
+def test_get_all_depositor_addresses_with_offset():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
+    assert(len(vault.getBatchDepositorAddresses(depositors_len-2, 0)) == depositors_len-2)
+
+def test_get_all_vaults(configs):
+    check_network_is_mainnet_fork()
+    vaults_factory = AutomatedVaultsFactory[-1]
+    assert(len(vaults_factory.getBatchVaults(vaults_factory.allVaultsLength(), 0)) == vaults_factory.allVaultsLength())
+
+def test_get_all_vaults_with_offset():
+    check_network_is_mainnet_fork()
+    vaults_factory = AutomatedVaultsFactory[-1]
+    n_requested_vaults = 2
+    assert(len(vaults_factory.getBatchVaults(2, 1)) == n_requested_vaults)
+
 
 ################################ Contract Validations ################################
 
@@ -866,18 +900,6 @@ def test_set_last_update_by_not_worker_address():
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
-def test_get_all_vaults(configs):
-    check_network_is_mainnet_fork()
-    vaults_factory = AutomatedVaultsFactory[-1]
-    __create_x_vaults(configs, vaults_factory, 3, dev_wallet)
-    assert(len(vaults_factory.getBatchVaults(vaults_factory.allVaultsLength(), 0)) == vaults_factory.allVaultsLength())
-
-def test_get_all_vaults_with_offset():
-    check_network_is_mainnet_fork()
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_requested_vaults = 2
-    assert(len(vaults_factory.getBatchVaults(2, 1)) == n_requested_vaults)
-
 def test_get_all_vaults_with_limit_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
@@ -905,30 +927,6 @@ def test_get_all_vaults_with_invalid_limit_with_start_after():
     # Act / Assert
     with reverts():
         vaults_factory.getBatchVaults(vaults_factory.allVaultsLength()-1, 2)
-
-def test_user_with_vaults_return_vaults(configs):
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = 3
-    __create_x_vaults(configs, vaults_factory, n_vaults, dev_wallet2)
-    assert(len(vaults_factory.getUserVaults(dev_wallet2.address)) == n_vaults)
-
-def test_user_without_vault_returns_no_vaults():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    assert(len(vaults_factory.getUserVaults(empty_wallet.address)) == 0)
-
-def test_get_all_depositor_addresses():
-    check_network_is_mainnet_fork()
-    # Vaults have been created in previous tests.
-    vault = get_strategy_vault()
-    depositors_len = vault.allDepositorsLength()
-    assert(len(vault.getBatchDepositorAddresses(depositors_len, 0)) == depositors_len)
-
-def test_get_all_depositor_addresses_with_offset():
-    check_network_is_mainnet_fork()
-    # Vaults have been created in previous tests.
-    vault = get_strategy_vault()
-    depositors_len = vault.allDepositorsLength()
-    assert(len(vault.getBatchDepositorAddresses(depositors_len-2, 0)) == depositors_len-2)
 
 def test_get_all_depositors_with_start_after_equal_to_length():
     check_network_is_mainnet_fork()
@@ -959,7 +957,11 @@ def test_get_all_depositors_with_invalid_limit_with_start_after():
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    with ("Invalid interval."):
+    """with open(PATHS.AUTOMATED_VAULT) as file:
+        contract_abi = (json.load(file))["abi"]
+    costume_error = encode_custom_error(contract_abi, "InvalidParameters", ["Invalid interval."])
+    print(costume_error)"""
+    with reverts():
         vault.getBatchDepositorAddresses(2, depositors_len-1)
 
 
@@ -998,16 +1000,29 @@ def __get_init_vault_params(configs: dict, wallet_address: str) -> tuple:
         configs["treasury_percentage_fee_on_balance_update"],
     )
 
-def __create_x_vaults(configs: dict, vaults_factory: AutomatedVaultsFactory, n_vaults: int, wallet_address: object):
-    (
-        strategy_params,
-        init_vault_from_factory_params,
-    ) = __get_default_strategy_and_init_vault_params(configs)
-    # Create a few vaults
-    n_vaults = 3
-    for i in range(n_vaults):
-        vaults_factory.createVault(
-        init_vault_from_factory_params,
-        strategy_params,
-        {"from": wallet_address, "value": configs["treasury_fixed_fee_on_vault_creation"]},
-    )
+# https://github.com/eth-brownie/brownie/issues/1108
+""""def encode_custom_error(contract_abi: dict, err_name: str, params: list) -> str:
+    
+    #Used to identify custom errors in testing
+    
+    for error in [abi for abi in contract_abi if abi["type"] == "error"]:
+        # Get error signature components
+        name = error["name"]
+        data_types = [collapse_if_tuple(abi_input) for abi_input in error.get("inputs", [])]
+        error_signature_hex = function_abi_to_4byte_selector(error).hex()
+
+        if err_name == name:
+            encoded_params = ''
+            for param in params:
+                if(type(param)==str):
+                    print(param.zfill(66)[2:])
+                    return('typed error: 0x'+error_signature_hex+param.zfill(66)[2:])
+                elif(type(param)==int):
+                    val = "{0:#0{1}x}".format(param,66)
+                    val = val[2:]
+                else:
+                    return 'Unsported type'
+                encoded_params = encoded_params + val
+            return('typed error: 0x'+error_signature_hex+encoded_params)
+
+    return 'error not found'"""
