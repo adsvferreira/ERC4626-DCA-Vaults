@@ -9,5 +9,6 @@ pragma solidity 0.8.21;
 
 library Roles {
     bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 public constant STRATEGY_WORKER = keccak256("STRATEGY_WORKER");
     bytes32 public constant CONTROLLER_CALLER = keccak256("CONTROLLER_CALLER");
 }
