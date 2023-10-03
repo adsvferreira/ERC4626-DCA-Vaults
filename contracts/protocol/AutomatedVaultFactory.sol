@@ -15,6 +15,8 @@ import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
+error InvalidParameters(string message);
+
 contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     event VaultCreated(
         address indexed creator,
@@ -32,11 +34,11 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     uint256 public creatorPercentageFeeOnDeposit; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
     uint256 public treasuryPercentageFeeOnBalanceUpdate; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
 
-    address[] private _allVaults;
-    mapping(address => address[]) public getUserVaults;
-    mapping(address => address[]) private _vaultsPerStrategyWorker;
+    address[] public getVaultAddress;
+    mapping(address => address[]) private _userVaults;
+    mapping(address => address[]) _vaultsPerStrategyWorker;
 
-    IUniswapV2Factory uniswapV2Factory;
+    IUniswapV2Factory public uniswapV2Factory;
 
     constructor(
         address _uniswapV2Factory,
@@ -55,7 +57,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     }
 
     function allVaultsLength() external view returns (uint256) {
-        return _allVaults.length;
+        return getVaultAddress.length;
     }
 
     function createVault(
@@ -92,7 +94,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams
         );
         newVaultAddress = address(newVault);
-        _allVaults.push(newVaultAddress);
+        getVaultAddress.push(newVaultAddress);
         _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
             newVaultAddress
         );
@@ -138,16 +140,35 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         return false;
     }
 
-    function getVaultAddress(
-        uint256 i
-    ) external view virtual returns (address) {
-        return _allVaults[i];
-    }
-
     function getAllVaultsPerStrategyWorker(
         address strategyWorker
     ) external view returns (address[] memory) {
         return _vaultsPerStrategyWorker[strategyWorker];
+    }
+
+    function getBatchVaults(
+        uint256 limit,
+        uint256 startAfter
+    ) public view returns (address[] memory) {
+        if (
+            startAfter >= getVaultAddress.length ||
+            limit + startAfter > getVaultAddress.length
+        ) {
+            revert InvalidParameters("Invalid interval.");
+        }
+        address[] memory vaults = new address[](limit);
+        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
+        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+            vaults[counter] = getVaultAddress[i];
+            counter += 1;
+        }
+        return vaults;
+    }
+
+    function getUserVaults(
+        address user
+    ) public view returns (address[] memory) {
+        return _userVaults[user];
     }
 
     function _validateCreateVaultInputs(
@@ -236,7 +257,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             "Null Address is not a valid newVault address"
         );
         // 2 vaults can't the same address, tx would revert at vault instantiation
-        getUserVaults[creator].push(newVault);
+        _userVaults[creator].push(newVault);
     }
 
     function _buyPercentagesSum(

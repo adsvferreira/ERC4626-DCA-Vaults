@@ -14,9 +14,9 @@ import {AutomatedVaultERC4626} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
 contract Resolver {
-    IAutomatedVaultsFactory automatedVaultsFactory;
+    IAutomatedVaultsFactory public automatedVaultsFactory;
 
-    address strategyWorkerAddress;
+    address public strategyWorkerAddress;
 
     constructor(
         address _automatedVaultsFactoryAddress,
@@ -43,15 +43,15 @@ contract Resolver {
                     IController.triggerStrategyAction.selector,
                     strategyWorkerAddress,
                     address(vault),
-                    vault.allDepositorAddresses(j)
+                    vault.getDepositorAddress(j)
                 );
 
                 canExec = _canExec(
-                    vault.lastUpdateOf(vault.allDepositorAddresses(j)),
+                    vault.lastUpdateOf(vault.getDepositorAddress(j)),
                     vault.getUpdateFrequencyTimestamp(),
-                    vault.balanceOf(vault.allDepositorAddresses(j)),
+                    vault.balanceOf(vault.getDepositorAddress(j)),
                     vault.getDepositorTotalPeriodicBuyAmount(
-                        vault.allDepositorAddresses(j)
+                        vault.getDepositorAddress(j)
                     )
                 );
 

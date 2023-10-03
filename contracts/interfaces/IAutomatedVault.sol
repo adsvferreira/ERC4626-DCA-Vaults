@@ -33,4 +33,9 @@ interface IAutomatedVault {
     function getUpdateFrequencyTimestamp() external view returns (uint256);
 
     function lastUpdateOf(address depositor) external view returns (uint256);
+
+    function getBatchDepositorAddresses(
+        uint256 limit,
+        uint256 startAfter
+    ) external view returns (address[] memory);
 }

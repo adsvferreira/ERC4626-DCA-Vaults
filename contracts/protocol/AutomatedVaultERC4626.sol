@@ -16,17 +16,20 @@ import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
-import {PercentageMath} from "../libraries/math/percentageMath.sol";
+import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+error InvalidParameters(string message);
+
 contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     using Math for uint256;
-    using PercentageMath for uint256;
     using SafeERC20 for IERC20;
+    using PercentageMath for uint256;
 
+    uint256 public feesAccruedByCreator;
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 10;
 
     ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
@@ -36,10 +39,10 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     uint256 public buyAssetsLength;
     /**
      * @dev Note: Removing entries from dynamic arrays can be gas-expensive.
-     * The `allDepositorAddresses` array stores all users who have deposited funds in this vault,
+     * The `getDepositorAddress` array stores all users who have deposited funds in this vault,
      * even if they have already withdrawn their entire balance. Use `balanceOf` to check individual balances.
      */
-    address[] public allDepositorAddresses;
+    address[] public getDepositorAddress;
     uint256 public allDepositorsLength;
 
     /**
@@ -170,6 +173,25 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         return _lastUpdatePerDepositor[depositor];
     }
 
+    function getBatchDepositorAddresses(
+        uint256 limit,
+        uint256 startAfter
+    ) public view returns (address[] memory) {
+        if (
+            limit + startAfter > getDepositorAddress.length ||
+            startAfter >= getDepositorAddress.length
+        ) {
+            revert InvalidParameters("Invalid interval");
+        }
+        address[] memory allDepositors = new address[](limit);
+        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
+        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+            allDepositors[counter] = getDepositorAddress[i];
+            counter += 1;
+        }
+        return allDepositors;
+    }
+
     function _fillUpdateFrequenciesMap() private {
         _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
@@ -259,7 +281,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     ) internal {
         if (receiver == initMultiAssetVaultParams.creator) {
             if (balanceOf(receiver) == 0 && shares > 0) {
-                allDepositorAddresses.push(receiver);
+                getDepositorAddress.push(receiver);
                 allDepositorsLength += 1;
                 _initialDepositBalances[receiver] = shares;
                 _updateDepositorBuyAmounts(receiver);
@@ -283,7 +305,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             );
 
             if (balanceOf(receiver) == 0 && depositorShares > 0) {
-                allDepositorAddresses.push(receiver);
+                getDepositorAddress.push(receiver);
                 allDepositorsLength += 1;
                 _initialDepositBalances[receiver] = depositorShares;
                 _updateDepositorBuyAmounts(receiver);
@@ -294,13 +316,14 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
                 balanceOf(initMultiAssetVaultParams.creator) == 0 &&
                 creatorShares > 0
             ) {
-                allDepositorAddresses.push(initMultiAssetVaultParams.creator);
+                getDepositorAddress.push(initMultiAssetVaultParams.creator);
                 allDepositorsLength += 1;
                 _initialDepositBalances[
                     initMultiAssetVaultParams.creator
                 ] = creatorShares;
                 _updateDepositorBuyAmounts(initMultiAssetVaultParams.creator);
             }
+            feesAccruedByCreator += creatorShares;
             _mint(initMultiAssetVaultParams.creator, creatorShares);
         }
         // Activates vault after 1st deposit

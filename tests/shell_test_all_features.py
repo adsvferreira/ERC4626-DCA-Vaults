@@ -19,7 +19,7 @@ from brownie import (
 
 # dev_wallet = accounts[0]
 dev_wallet = accounts.add(config["wallets"]["from_key_1"])
-# dev_wallet_2 = accounts.add(config["wallets"]["from_key_2"])
+dev_wallet_2 = accounts.add(config["wallets"]["from_key_2"])
 
 # # MAINNET ADDRESSES:
 # usdce_address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -96,9 +96,9 @@ tx5 = vaults_factory.createVault(
 protocol_treasury_balance = treasury_vault.balance()
 print("TREASURY BALANCE: ", protocol_treasury_balance)
 print("ALL VAULTS LENGTH: ", vaults_factory.allVaultsLength())
-print("WALLET STRATEGIES", vaults_factory.getUserVaults(dev_wallet.address, 0))
+print("WALLET STRATEGIES", vaults_factory.getUserVaults(dev_wallet.address))
 
-created_strategy_vault_address = vaults_factory.allVaults(0)
+created_strategy_vault_address = vaults_factory.getVaultAddress(0)
 created_strategy_vault = AutomatedVaultERC4626.at(created_strategy_vault_address)
 
 print("INITIAL STRATEGY BALANCE", created_strategy_vault.balanceOf(dev_wallet))
