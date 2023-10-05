@@ -36,5 +36,13 @@ library ConfigTypes {
         uint256[] buyPercentages;
         Enums.BuyFrequency buyFrequency;
         address strategyWorker;
+        address strategyManager;
+    }
+
+    struct WhitelistedDepositAsset {
+        address assetAddress;
+        Enums.AssetTypes assetType;
+        address oracleAddress;
+        bool isActive;
     }
 }

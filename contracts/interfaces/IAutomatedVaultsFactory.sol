@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 
 interface IAutomatedVaultsFactory {
@@ -22,6 +23,10 @@ interface IAutomatedVaultsFactory {
         address buyAsset
     ) external view returns (bool);
 
+    function getAllVaultsPerStrategyWorker(
+        address strategyWorker
+    ) external view returns (address[] memory);
+
     function getBatchVaults(
         uint256 limit,
         uint256 startAfter
@@ -29,9 +34,5 @@ interface IAutomatedVaultsFactory {
 
     function getUserVaults(
         address user
-    ) external view returns (address[] memory);
-
-    function getAllVaultsPerStrategyWorker(
-        address strategyWorker
     ) external view returns (address[] memory);
 }

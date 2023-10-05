@@ -11,6 +11,8 @@ pragma solidity 0.8.21;
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
+import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
+import {StrategyUtils} from "../libraries/helpers/StrategyUtils.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
@@ -39,11 +41,13 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     mapping(address => address[]) _vaultsPerStrategyWorker;
 
     IUniswapV2Factory public uniswapV2Factory;
+    IStrategyManager public strategyManager;
 
     constructor(
         address _uniswapV2Factory,
         address _dexMainToken,
         address payable _treasury,
+        address _strategyManager,
         uint256 _treasuryFixedFeeOnVaultCreation,
         uint256 _creatorPercentageFeeOnDeposit,
         uint256 _treasuryPercentageFeeOnBalanceUpdate
@@ -54,6 +58,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         creatorPercentageFeeOnDeposit = _creatorPercentageFeeOnDeposit;
         treasuryPercentageFeeOnBalanceUpdate = _treasuryPercentageFeeOnBalanceUpdate;
         uniswapV2Factory = IUniswapV2Factory(_uniswapV2Factory);
+        strategyManager = IStrategyManager(_strategyManager);
     }
 
     function allVaultsLength() external view returns (uint256) {
@@ -62,7 +67,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function createVault(
         ConfigTypes.InitMultiAssetVaultFactoryParams
-            memory initMultiAssetVaultFactoryParams,
+            calldata initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
         require(
@@ -167,7 +172,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function getUserVaults(
         address user
-    ) public view returns (address[] memory) {
+    ) external view returns (address[] memory) {
         return _userVaults[user];
     }
 
@@ -180,6 +185,18 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             address(initMultiAssetVaultFactoryParams.depositAsset) !=
                 address(0),
             "Deposit address cannot be zero address"
+        );
+        require(
+            address(strategyParams.strategyWorker) != address(0),
+            "strategyWorker address cannot be zero address"
+        );
+        require(
+            strategyManager
+                .getWhitelistedDepositAsset(
+                    initMultiAssetVaultFactoryParams.depositAsset
+                )
+                .isActive == true,
+            "Deposit address is not whitelisted"
         );
         if (initMultiAssetVaultFactoryParams.depositAsset != dexMainToken) {
             require(
@@ -197,14 +214,21 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             ),
             "Swap path not found for at least 1 buy asset"
         );
+        uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
+            strategyParams.buyPercentages
+        );
         require(
-            _buyPercentagesSum(strategyParams.buyPercentages) <=
-                PercentageMath.PERCENTAGE_FACTOR,
+            buyPercentagesSum <= PercentageMath.PERCENTAGE_FACTOR,
             "Buy percentages sum is gt 100"
         );
         require(
-            address(strategyParams.strategyWorker) != address(0),
-            "strategyWorker address cannot be zero address"
+            StrategyUtils.calculateStrategyMaxNumberOfActions(
+                buyPercentagesSum
+            ) <=
+                strategyManager.getMaxNumberOfActionsPerFrequency(
+                    strategyParams.buyFrequency
+                ),
+            "Max number of actions exceeds the limit"
         );
     }
 
@@ -260,12 +284,10 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         _userVaults[creator].push(newVault);
     }
 
-    function _buyPercentagesSum(
-        uint256[] memory buyPercentages
-    ) private pure returns (uint256 buyPercentagesSum) {
-        for (uint256 i = 0; i < buyPercentages.length; i++) {
-            require(buyPercentages[i] > 0, "Buy percentage must be gt zero");
-            buyPercentagesSum += buyPercentages[i];
-        }
-    }
+    function _getStrategyTimeLimitsInDays(
+        uint256 maxNumberOfStrategyActions
+    )
+        private
+        returns (Enums.StrategyTimeLimitsInDays strategyTimeLimitsInDays)
+    {}
 }
