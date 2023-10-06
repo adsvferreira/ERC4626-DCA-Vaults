@@ -164,11 +164,25 @@ def deploy_resolver(
 """
 
 usdce_address = "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8"
-deposit_token_data_feed_address= "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3"
-whitelisted_deposit_asset = (usdce_address, 0, deposit_token_data_feed_address, True)
+weth_address = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
+arb_address = "0x912ce59144191c1204e64559fe8253a0e49e6548"
+usdce_data_feed_address= "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3"
+weth_data_feed_address= "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612"
+arb_data_feed_address = "0xb2a824043730fe05f3da2efafa1cbbe83fa548d6"
+usdce_decimals = 6
+weth_decimals = 18
+arb_decimals = 18
+usdce_whitelisted_deposit_asset = (usdce_address, 0, usdce_data_feed_address, True)
+weth_whitelisted_deposit_asset = (weth_address, 0, weth_data_feed_address, True)
+arb_whitelisted_deposit_asset = (arb_address, 0, arb_data_feed_address, True)
 buy_percentages = [833]
 buy_frequency = 0
 treasury_percentage_fee_on_balance_update = 300
-strategy_manager.simulateMinDepositValue(whitelisted_deposit_asset, buy_percentages, buy_frequency, treasury_percentage_fee_on_balance_update)
+
+strategy_manager.simulateMinDepositValue(usdce_whitelisted_deposit_asset, buy_percentages, buy_frequency, treasury_percentage_fee_on_balance_update, usdce_decimals)
+
+strategy_manager.simulateMinDepositValue(weth_whitelisted_deposit_asset, buy_percentages, buy_frequency, treasury_percentage_fee_on_balance_update, weth_decimals)
+
+strategy_manager.simulateMinDepositValue(arb_whitelisted_deposit_asset, buy_percentages, buy_frequency, treasury_percentage_fee_on_balance_update, arb_decimals)
 
 """

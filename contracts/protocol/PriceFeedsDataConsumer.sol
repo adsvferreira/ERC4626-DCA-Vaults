@@ -19,64 +19,58 @@ contract PriceFeedsDataConsumer {
 
     function getDataFeedLatestPriceAndDecimals(
         address oracleAddress
-    ) external view returns (int256, uint8) {
+    ) external view returns (uint256 answer, uint256 decimals) {
         AggregatorV3Interface dataFeed = AggregatorV3Interface(oracleAddress);
         // prettier-ignore
         (
             /* uint80 roundID */,
-            int256 answer,
+            int256 answerRaw,
             /*uint256 startedAt*/,
             /*uint256 timeStamp*/,
             /*uint80 answeredInRound*/
         ) = dataFeed.latestRoundData();
-        uint8 decimals = dataFeed.decimals();
-        return (answer, decimals);
+        uint8 decimalsRaw = dataFeed.decimals();
+        require(
+            answerRaw > 0 && decimalsRaw > 0,
+            "Price feed returned zero or negative values"
+        );
+        answer = uint256(answerRaw);
+        decimals = uint256(decimalsRaw);
     }
 
     function getNativeTokenDataFeedLatestPriceAndDecimals()
         external
         view
-        returns (int256, uint8)
+        returns (uint256 answer, uint256 decimals)
     {
         // prettier-ignore
         (
             /* uint80 roundID */,
-            int256 answer,
+            int256 answerRaw,
             /*uint256 startedAt*/,
             /*uint256 timeStamp*/,
             /*uint80 answeredInRound*/
         ) = nativeTokenDataFeed.latestRoundData();
-        uint8 decimals = nativeTokenDataFeed.decimals();
-        return (answer, decimals);
+        uint8 decimalsRaw = nativeTokenDataFeed.decimals();
+        answer = uint256(answerRaw);
+        decimals = uint256(decimalsRaw);
     }
 
     function getTokenDataFeedLatestPriceParsed(
         address oracleAddress
-    ) external view returns (int256 tokenParsedPrice) {
-        (int256 tokenPrice, uint8 tokenPriceDecimals) = this
+    ) external view returns (uint256 tokenParsedPrice) {
+        (uint256 tokenPrice, uint256 tokenPriceDecimals) = this
             .getDataFeedLatestPriceAndDecimals(oracleAddress);
-        require(
-            tokenPriceDecimals > 0,
-            "Price feed returned 0 for token decimals"
-        );
-        int8 castedTokenPriceDecimals = int8(tokenPriceDecimals);
-        tokenParsedPrice = tokenPrice / int256(castedTokenPriceDecimals);
+        tokenParsedPrice = tokenPrice / tokenPriceDecimals;
     }
 
     function getNativeTokenDataFeedLatestPriceParsed()
         external
         view
-        returns (int256 nativeTokenParsedPrice)
+        returns (uint256 nativeTokenParsedPrice)
     {
-        (int256 nativeTokenPrice, uint8 nativeTokenPriceDecimals) = this
+        (uint256 nativeTokenPrice, uint256 nativeTokenPriceDecimals) = this
             .getNativeTokenDataFeedLatestPriceAndDecimals();
-        require(
-            nativeTokenPriceDecimals > 0,
-            "Price feed returned 0 for native token decimals"
-        );
-        int8 castedNativeTokenPriceDecimals = int8(nativeTokenPriceDecimals);
-        nativeTokenParsedPrice =
-            nativeTokenPrice /
-            int256(castedNativeTokenPriceDecimals);
+        nativeTokenParsedPrice = nativeTokenPrice / nativeTokenPriceDecimals;
     }
 }

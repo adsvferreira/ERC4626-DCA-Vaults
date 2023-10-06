@@ -2,14 +2,14 @@
 pragma solidity 0.8.21;
 
 interface IPriceFeedsDataConsumer {
-    function getDataFeedLatestPrice(
+    function getDataFeedLatestPriceAndDecimals(
         address oracleAddress
-    ) external view returns (int256);
+    ) external view returns (uint256, uint256);
 
     function getNativeTokenDataFeedLatestPriceAndDecimals()
         external
         view
-        returns (int256, uint8);
+        returns (uint256, uint256);
 
     function getTokenDataFeedLatestPriceParsed(
         address oracleAddress

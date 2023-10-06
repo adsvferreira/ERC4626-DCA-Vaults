@@ -19,7 +19,7 @@ import {IPriceFeedsDataConsumer} from "../interfaces/IPriceFeedsDataConsumer.sol
 
 contract StrategyManager is IStrategyManager, Ownable {
     uint256 public constant SAFETY_FACTORS_PRECISION_MULTIPLIER = 1000;
-    uint256 private _MAX_EXPECTED_GAS_UNITS_WEI;
+    uint256 private _MAX_EXPECTED_GAS_UNITS_WEI = 2_500_000;
 
     mapping(Enums.BuyFrequency => uint256)
         private _maxNumberOfActionsPerFrequency;
@@ -132,22 +132,22 @@ contract StrategyManager is IStrategyManager, Ownable {
             maxNumberOfDays <= maxNumberOfDaysAllowed,
             "Max number of actions exceeds the limit"
         );
-        if (maxNumberOfDaysAllowed <= 30) {
+        if (maxNumberOfDays <= 30) {
             return _gasCostSafetyFactors[Enums.StrategyTimeLimitsInDays.THIRTY];
         }
-        if (maxNumberOfDaysAllowed <= 180) {
+        if (maxNumberOfDays <= 180) {
             return
                 _gasCostSafetyFactors[
                     Enums.StrategyTimeLimitsInDays.ONE_HUNDRED_AND_EIGHTY
                 ];
         }
-        if (maxNumberOfDaysAllowed <= 180) {
+        if (maxNumberOfDays <= 180) {
             return
                 _gasCostSafetyFactors[
                     Enums.StrategyTimeLimitsInDays.ONE_HUNDRED_AND_EIGHTY
                 ];
         }
-        if (maxNumberOfDaysAllowed <= 365) {
+        if (maxNumberOfDays <= 365) {
             return
                 _gasCostSafetyFactors[
                     Enums.StrategyTimeLimitsInDays.THREE_HUNDRED_AND_SIXTY_FIVE
@@ -200,41 +200,38 @@ contract StrategyManager is IStrategyManager, Ownable {
         ConfigTypes.WhitelistedDepositAsset calldata whitelistedDepositAsset,
         uint256[] memory buyPercentages,
         Enums.BuyFrequency buyFrequency,
-        uint256 treasuryPercentageFeeOnBalanceUpdate
+        uint256 treasuryPercentageFeeOnBalanceUpdate,
+        uint256 depositAssetDecimals
     ) external view returns (uint256 minDepositValue) {
         uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
             buyPercentages
         );
-        uint256 nativeTokenParsedPrice = uint256(
-            priceFeedsDataConsumer.getNativeTokenDataFeedLatestPriceParsed()
-        );
-        uint256 depositTokenParsedPrice = uint256(
-            priceFeedsDataConsumer.getTokenDataFeedLatestPriceParsed(
+        (
+            uint256 nativeTokenPrice,
+            uint256 nativeTokenPriceDecimals
+        ) = priceFeedsDataConsumer
+                .getNativeTokenDataFeedLatestPriceAndDecimals();
+        (
+            uint256 tokenPrice,
+            uint256 tokenPriceDecimals
+        ) = priceFeedsDataConsumer.getDataFeedLatestPriceAndDecimals(
                 whitelistedDepositAsset.oracleAddress
-            )
-        );
-        uint256 gasPriceWei;
-        assembly {
-            gasPriceWei := gasprice()
-        }
-        uint256 gasPriceEth = gasPriceWei / (10 ** 18);
-        uint256 maxExpectedGas = this.getMaxExpectedGasUnits();
+            );
+        uint256 gasPriceWei = 100_000_000;
+        // GAS PRICE IS ZERO FOR FORKED CHAINS
+        // TODO: UNCOMMENT - TEST ONLY!
+        // assembly {
+        //     gasPriceWei := gasprice()
+        // }
+        //
         uint256 maxNumberOfStrategyActions = StrategyUtils
             .calculateStrategyMaxNumberOfActions(buyPercentagesSum);
-        uint256 gasCostSafetyFactor = this.getGasCostSafetyFactor(
-            maxNumberOfStrategyActions,
-            buyFrequency
-        );
-        uint256 depositTokenPriceSafetyFactor = this
-            .getDepositTokenPriceSafetyFactor(
-                whitelistedDepositAsset.assetType,
-                maxNumberOfStrategyActions,
-                buyFrequency
-            );
         // prettier-ignore
-        minDepositValue = nativeTokenParsedPrice * PercentageMath.PERCENTAGE_FACTOR * 
-        ((maxExpectedGas * maxNumberOfStrategyActions * gasPriceEth * gasCostSafetyFactor) 
-        / (treasuryPercentageFeeOnBalanceUpdate * depositTokenPriceSafetyFactor));
+        minDepositValue = (nativeTokenPrice * PercentageMath.PERCENTAGE_FACTOR * 
+        this.getMaxExpectedGasUnits() * maxNumberOfStrategyActions * gasPriceWei * 
+        this.getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) * (10 ** (tokenPriceDecimals + depositAssetDecimals))) 
+        / (tokenPrice * treasuryPercentageFeeOnBalanceUpdate * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType,maxNumberOfStrategyActions,buyFrequency) * 
+        (10 ** (18 + nativeTokenPriceDecimals)));
     }
 
     function _fillNumberOfDaysPerBuyFrequency() private {

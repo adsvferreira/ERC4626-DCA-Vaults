@@ -116,7 +116,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             whitelistedDepositAsset,
             strategyParams.buyPercentages,
             strategyParams.buyFrequency,
-            initMultiAssetVaultParams.treasuryPercentageFeeOnBalanceUpdate
+            initMultiAssetVaultParams.treasuryPercentageFeeOnBalanceUpdate,
+            uint256(decimals())
         );
         require(
             assets >= minDepositValue,

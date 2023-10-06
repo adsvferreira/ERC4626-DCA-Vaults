@@ -56,6 +56,7 @@ interface IStrategyManager {
         ConfigTypes.WhitelistedDepositAsset calldata whitelistedDepositAsset,
         uint256[] memory buyPercentages,
         Enums.BuyFrequency buyFrequency,
-        uint256 treasuryPercentageFeeOnBalanceUpdate
+        uint256 treasuryPercentageFeeOnBalanceUpdate,
+        uint256 depositAssetDecimals
     ) external view returns (uint256 minDepositValue);
 }
