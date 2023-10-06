@@ -13,6 +13,8 @@ pragma solidity 0.8.21;
 
 import {Roles} from "../libraries/roles/Roles.sol";
 import {Enums} from "../libraries/types/Enums.sol";
+import {Errors} from "../libraries/types/Errors.sol";
+import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
@@ -22,8 +24,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-error InvalidParameters(string message);
-
 contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -32,11 +32,11 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     uint256 public feesAccruedByCreator;
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 10;
 
-    ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
     ConfigTypes.StrategyParams public strategyParams;
+    ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
 
-    address[] public buyAssetAddresses;
     uint256 public buyAssetsLength;
+    address[] public buyAssetAddresses;
     /**
      * @dev Note: Removing entries from dynamic arrays can be gas-expensive.
      * The `getDepositorAddress` array stores all users who have deposited funds in this vault,
@@ -51,25 +51,9 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
      * To adjust the absolute amounts swapped periodically, withdraw the entire balance and deposit a different amount.
      */
     mapping(address depositor => uint256) private _initialDepositBalances;
+    mapping(address depositor => uint256) private _lastUpdatePerDepositor;
     mapping(address depositor => uint256[]) private _depositorBuyAmounts;
     mapping(Enums.BuyFrequency => uint256) private _updateFrequencies;
-    mapping(address depositor => uint256) private _lastUpdatePerDepositor;
-
-    event CreatorFeeTransfered(
-        address indexed vault,
-        address indexed depositor,
-        address indexed creator,
-        uint256 shares
-    );
-
-    /**
-     * @dev Attempted to deposit more assets than the max amount for `receiver`.
-     */
-    error ERC4626ExceededMaxDeposit(
-        address receiver,
-        uint256 assets,
-        uint256 max
-    );
 
     constructor(
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams,
@@ -81,7 +65,9 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             _initMultiAssetVaultParams.symbol
         )
     {
-        require(msg.sender == _initMultiAssetVaultParams.factory, "FORBIDDEN");
+        if (msg.sender != _initMultiAssetVaultParams.factory) {
+            revert Errors.Forbidden("");
+        }
         _validateInputs(
             _initMultiAssetVaultParams.buyAssets,
             _strategyParams.buyPercentages
@@ -101,7 +87,11 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     ) public override(ERC4626) returns (uint256) {
         uint256 maxAssets = maxDeposit(receiver);
         if (assets > maxAssets) {
-            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+            revert Events.ERC4626ExceededMaxDeposit(
+                receiver,
+                assets,
+                maxAssets
+            );
         }
 
         uint256 shares = previewDeposit(assets);
@@ -153,8 +143,12 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         if (_depositorBuyAmounts[depositor].length == 0) {
             return 0;
         }
-        for (uint256 i = 0; i < buyAssetsLength; i++) {
+        uint256 _buyAssetsLength = buyAssetsLength;
+        for (uint256 i; i < _buyAssetsLength; ) {
             totalPeriodicBuyAmount += _depositorBuyAmounts[depositor][i];
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -181,13 +175,17 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             limit + startAfter > getDepositorAddress.length ||
             startAfter >= getDepositorAddress.length
         ) {
-            revert InvalidParameters("Invalid interval");
+            revert Errors.InvalidParameters("Invalid interval");
         }
         address[] memory allDepositors = new address[](limit);
-        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
-        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+        uint256 counter; // This is needed to copy from a storage array to a memory array.
+        uint256 _size = startAfter + limit;
+        for (uint256 i = startAfter; i < _size; ) {
             allDepositors[counter] = getDepositorAddress[i];
-            counter += 1;
+            unchecked {
+                ++i;
+                ++counter;
+            }
         }
         return allDepositors;
     }
@@ -205,25 +203,31 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         uint256[] memory buyPercentages
     ) private pure {
         // Check if max number of deposited assets was not exceeded
-        require(
-            buyAssets.length <= uint256(MAX_NUMBER_OF_BUY_ASSETS),
-            "MAX_NUMBER_OF_BUY_ASSETS exceeded"
-        );
+        if (buyAssets.length > uint256(MAX_NUMBER_OF_BUY_ASSETS)) {
+            revert Errors.InvalidParameters(
+                "MAX_NUMBER_OF_BUY_ASSETS exceeded"
+            );
+        }
         // Check if both arrays have the same length
-        require(
-            buyPercentages.length == buyAssets.length,
-            "buyPercentages and buyAssets arrays must have the same length"
-        );
+        if (buyPercentages.length != buyAssets.length) {
+            revert Errors.InvalidParameters(
+                "buyPercentages and buyAssets arrays must have the same length"
+            );
+        }
     }
 
     function _populateBuyAssetsData(
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams
     ) private {
         buyAssetsLength = _initMultiAssetVaultParams.buyAssets.length;
-        for (uint256 i = 0; i < buyAssetsLength; i++) {
+        uint256 _buyAssetsLength = buyAssetsLength;
+        for (uint256 i; i < _buyAssetsLength; ) {
             buyAssetAddresses.push(
                 address(_initMultiAssetVaultParams.buyAssets[i])
             );
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -282,7 +286,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         if (receiver == initMultiAssetVaultParams.creator) {
             if (balanceOf(receiver) == 0 && shares > 0) {
                 getDepositorAddress.push(receiver);
-                allDepositorsLength += 1;
+                ++allDepositorsLength;
                 _initialDepositBalances[receiver] = shares;
                 _updateDepositorBuyAmounts(receiver);
             }
@@ -297,7 +301,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             uint256 creatorShares = shares.percentMul(creatorPercentage);
             uint256 depositorShares = shares.percentMul(depositorPercentage);
 
-            emit CreatorFeeTransfered(
+            emit Events.CreatorFeeTransfered(
                 address(this),
                 initMultiAssetVaultParams.creator,
                 receiver,
@@ -306,7 +310,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
 
             if (balanceOf(receiver) == 0 && depositorShares > 0) {
                 getDepositorAddress.push(receiver);
-                allDepositorsLength += 1;
+                ++allDepositorsLength;
                 _initialDepositBalances[receiver] = depositorShares;
                 _updateDepositorBuyAmounts(receiver);
             }
@@ -317,7 +321,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
                 creatorShares > 0
             ) {
                 getDepositorAddress.push(initMultiAssetVaultParams.creator);
-                allDepositorsLength += 1;
+                ++allDepositorsLength;
                 _initialDepositBalances[
                     initMultiAssetVaultParams.creator
                 ] = creatorShares;
@@ -334,12 +338,16 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
 
     function _updateDepositorBuyAmounts(address depositor) internal {
         uint256 initialDepositBalance = _initialDepositBalances[depositor];
-        for (uint256 i = 0; i < buyAssetsLength; i++) {
+        uint256 _buyAssetsLength = buyAssetsLength;
+        for (uint256 i; i < _buyAssetsLength; ) {
             _depositorBuyAmounts[depositor].push(
                 initialDepositBalance.percentMul(
                     strategyParams.buyPercentages[i]
                 )
             );
+            unchecked {
+                ++i;
+            }
         }
     }
 }
