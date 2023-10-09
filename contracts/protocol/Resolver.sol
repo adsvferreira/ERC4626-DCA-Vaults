@@ -37,7 +37,7 @@ contract Resolver {
 
         for (uint256 i; i < allVaultsLength; ) {
             AutomatedVaultERC4626 vault = AutomatedVaultERC4626(allVaults[i]);
-            uint256 _vaulDepositorsLength;
+            uint256 _vaulDepositorsLength = vault.allDepositorsLength();
             for (uint256 j; j < _vaulDepositorsLength; ) {
                 execPayload = abi.encodeWithSelector(
                     IController.triggerStrategyAction.selector,
