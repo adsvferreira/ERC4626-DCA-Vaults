@@ -53,11 +53,18 @@ contract StrategyManager is IStrategyManager, Ownable {
     ) external onlyOwner {
         uint256 assetsLength = depositAssetsToWhitelist.length;
         for (uint256 i = 0; i < assetsLength; i++) {
+            if (
+                _whitelistedDepositAssets[
+                    depositAssetsToWhitelist[i].assetAddress
+                ].assetAddress == address(0) // Avoid duplicates
+            ) {
+                _whitelistedDepositAssetAddresses.push(
+                    depositAssetsToWhitelist[i].assetAddress
+                );
+            }
             _whitelistedDepositAssets[
                 depositAssetsToWhitelist[i].assetAddress
             ] = depositAssetsToWhitelist[i];
-            _whitelistedDepositAssetAddresses[i] = depositAssetsToWhitelist[i]
-                .assetAddress;
         }
     }
 
@@ -104,6 +111,9 @@ contract StrategyManager is IStrategyManager, Ownable {
         return _MAX_EXPECTED_GAS_UNITS_WEI;
     }
 
+    /**
+        @dev Assets returned can be deactivated. Check getWhitelistedDepositAsset(address)
+    */
     function getWhitelistedDepositAssetAddresses()
         external
         view
@@ -127,7 +137,7 @@ contract StrategyManager is IStrategyManager, Ownable {
             maxNumberOfStrategyActions;
         uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
             buyFrequency
-        ];
+        ] * buyFrequencyInDays;
         require(
             maxNumberOfDays <= maxNumberOfDaysAllowed,
             "Max number of actions exceeds the limit"
@@ -135,11 +145,8 @@ contract StrategyManager is IStrategyManager, Ownable {
         if (maxNumberOfDays <= 30) {
             return _gasCostSafetyFactors[Enums.StrategyTimeLimitsInDays.THIRTY];
         }
-        if (maxNumberOfDays <= 180) {
-            return
-                _gasCostSafetyFactors[
-                    Enums.StrategyTimeLimitsInDays.ONE_HUNDRED_AND_EIGHTY
-                ];
+        if (maxNumberOfDays <= 90) {
+            return _gasCostSafetyFactors[Enums.StrategyTimeLimitsInDays.NINETY];
         }
         if (maxNumberOfDays <= 180) {
             return
@@ -165,30 +172,30 @@ contract StrategyManager is IStrategyManager, Ownable {
             maxNumberOfStrategyActions;
         uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
             buyFrequency
-        ];
+        ] * buyFrequencyInDays;
         require(
             maxNumberOfDays <= maxNumberOfDaysAllowed,
             "Max number of actions exceeds the limit"
         );
-        if (maxNumberOfDaysAllowed <= 30) {
+        if (maxNumberOfDays <= 30) {
             return
                 _depositTokenPriceSafetyFactors[assetType][
                     Enums.StrategyTimeLimitsInDays.THIRTY
                 ];
         }
-        if (maxNumberOfDaysAllowed <= 180) {
+        if (maxNumberOfDays <= 90) {
+            return
+                _depositTokenPriceSafetyFactors[assetType][
+                    Enums.StrategyTimeLimitsInDays.NINETY
+                ];
+        }
+        if (maxNumberOfDays <= 180) {
             return
                 _depositTokenPriceSafetyFactors[assetType][
                     Enums.StrategyTimeLimitsInDays.ONE_HUNDRED_AND_EIGHTY
                 ];
         }
-        if (maxNumberOfDaysAllowed <= 180) {
-            return
-                _depositTokenPriceSafetyFactors[assetType][
-                    Enums.StrategyTimeLimitsInDays.ONE_HUNDRED_AND_EIGHTY
-                ];
-        }
-        if (maxNumberOfDaysAllowed <= 365) {
+        if (maxNumberOfDays <= 365) {
             return
                 _depositTokenPriceSafetyFactors[assetType][
                     Enums.StrategyTimeLimitsInDays.THREE_HUNDRED_AND_SIXTY_FIVE

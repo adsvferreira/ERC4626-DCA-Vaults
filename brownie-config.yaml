@@ -49,11 +49,6 @@ networks:
         "0x51318b7d00db7acc4026c88c3952b66278b6a67f",
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
-        "0x6c2c06790b3e3e3c38e12ee22f8183b37a13ee55",
-        "0x0c880f6761f1af8d9aa9c466984b80dab9a8c9e8",
-        "0xd4d42f0b6def4ce0383636770ef773390d85c61a",
-        "0x371c7ec6d8039ff7933a2aa28eb827ffe1f52f07",
-        "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
       ]
   arbitrum-main:
     verify: True
@@ -86,11 +81,6 @@ networks:
         "0x51318b7d00db7acc4026c88c3952b66278b6a67f",
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
-        "0x6c2c06790b3e3e3c38e12ee22f8183b37a13ee55",
-        "0x0c880f6761f1af8d9aa9c466984b80dab9a8c9e8",
-        "0xd4d42f0b6def4ce0383636770ef773390d85c61a",
-        "0x371c7ec6d8039ff7933a2aa28eb827ffe1f52f07",
-        "0x18c11FD286C5EC11c3b683Caa813B77f5163A122",
       ]
 strategy-params:
   buy_percentages: [500, 500] #5% 5%
@@ -100,3 +90,38 @@ protocol-params:
   creator_percentage_fee_on_deposit: 50 #0.50%
   treasury_percentage_fee_on_balance_update: 300 #3%
   max_slippage_perc: 50 #0.5%
+  worker_max_expected_gas_units_wei: 100 # unrealistically low value in order to avoid minimum allowed during the testing proccess
+  # The following parameters must be changed if strategy manager default parameters change
+  number_of_days_per_buy_frequency:
+    0: 1 # FIFTEEN_MIN - TODO: Remove after prod
+    1: 1 # DAILY
+    2: 7 # WEEKLY
+    3: 14 # BI_WEEKLY
+    4: 30 # MONTHLY
+  max_number_of_actions_per_frequency:
+    0: 60 # FIFTEEN_MIN - TODO: Remove after prod
+    1: 60 # DAILY
+    2: 52 # WEEKLY
+    3: 26 # BI_WEEKLY
+    4: 12 # MONTHLY
+  gas_cost_safety_factors:
+    0: 1000 # THIRTY
+    1: 2250 # NINETY
+    2: 3060 # ONE_HUNDRED_AND_EIGHTY
+    3: 4000 # THREE_HUNDRED_AND_SIXTY_FIVE
+  deposit_token_price_safety_factor:
+    0: # STABLE
+      0: 1000 # THIRTY
+      1: 1000 # NINETY
+      2: 1000 # ONE_HUNDRED_AND_EIGHTY
+      3: 1000 # THREE_HUNDRED_AND_SIXTY_FIVE
+    1: # ETH_BTC
+      0: 1000 # THIRTY
+      1: 1000 # NINETY
+      2: 1000 # THREE_HUNDRED_AND_SIXTY_FIVE
+      3: 1000 # THREE_HUNDRED_AND_SIXTY_FIVE
+    2: # BLUE_CHIP
+      0: 900 # THIRTY
+      1: 800 # NINETY
+      2: 650 # THREE_HUNDRED_AND_SIXTY_FIVE
+      3: 500 # THREE_HUNDRED_AND_SIXTY_FIVE
