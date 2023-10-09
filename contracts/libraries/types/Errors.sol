@@ -13,4 +13,11 @@ library Errors {
         uint256 assets,
         uint256 max
     );
+
+    // Could not find a path between 2 assets.
+    error NoSwapPath(string message);
+    error InvalidFee(string message);
+    error NotEnoughEth(string message);
+    error TransferFailed(string message);
+    error InvalidBalance(string message);
 }

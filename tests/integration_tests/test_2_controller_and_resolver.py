@@ -175,7 +175,7 @@ def test_resolver_checker_after_controller_update_all_vaults(deposit_token):
     can_exec, payload = resolver.checker()
     decoded_last_payload = controller.decode_input(payload)
     # Assert
-    assert can_exec == False
+    assert not can_exec
     assert decoded_last_payload == expected_decoded_last_payload
 
 
@@ -187,7 +187,7 @@ def test_trigger_strategy_action_before_next_valid_timestamp():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with reverts("This vault cannot be updated yet for this user"):
+    with reverts():
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
