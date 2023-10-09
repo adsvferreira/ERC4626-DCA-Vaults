@@ -83,10 +83,6 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             memory initMultiAssetVaultParams = strategyVault
                 .getInitMultiAssetVaultParams();
 
-        uint256 totalFee;
-        uint256 amountToWithdraw;
-        uint256[] memory buyAmountsAfterFee;
-
         (
             amountToWithdraw,
             buyAmountsAfterFee,
