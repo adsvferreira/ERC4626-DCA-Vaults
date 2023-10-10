@@ -1,13 +1,20 @@
+import json
 import pytest
+import requests
+from math import floor
 from helpers import (
     get_account_from_pk,
     check_network_is_mainnet_fork,
 )
 from brownie import (
     StrategyManager,
+    PriceFeedsDataConsumer,
     config,
+    network,
     exceptions,
 )
+
+PERCENTAGE_FACTOR = 10_000
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
@@ -20,7 +27,7 @@ def test_whitelist_new_address_by_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = (configs["dex_main_token_address"], 1, configs["native_token_data_feed_address"], True)
+    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
@@ -50,12 +57,7 @@ def test_deactivate_whitelisted_address_by_owner(configs):
     strategy_manager = StrategyManager[-1]
     # Act
     strategy_manager.deactivateWhitelistedDepositAsset(configs["dex_main_token_address"], {"from": dev_wallet})
-    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"]) == (
-        configs["dex_main_token_address"],
-        2,
-        configs["native_token_data_feed_address"],
-        False,
-    )
+    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"])[3] == False
 
 
 def test_strategy_manager_default_parameters():
@@ -143,6 +145,62 @@ def test_set_deposit_token_price_safety_factor_by_owner():
     )  # 7 MONTH
 
 
+def test_simulate_min_deposit_value(configs, deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_manager = StrategyManager[-1]
+    price_feeds_data_consumer = PriceFeedsDataConsumer[-1]
+    (
+        native_token_price,
+        native_token_price_decimals,
+    ) = price_feeds_data_consumer.getNativeTokenDataFeedLatestPriceAndDecimals()
+    deposit_token_price, deposit_token_price_decimals = price_feeds_data_consumer.getDataFeedLatestPriceAndDecimals(
+        configs["whitelisted-deposit-assets"][0][2]
+    )
+    buy_percentages_sum = sum(configs["buy_percentages"])
+    max_number_of_strategy_actions = int(PERCENTAGE_FACTOR / buy_percentages_sum)
+    max_expected_gas_units = strategy_manager.getMaxExpectedGasUnits()
+    gas_cost_safety_factor = strategy_manager.getGasCostSafetyFactor(
+        max_number_of_strategy_actions, configs["buy_frequency"]
+    )
+    whitelisted_deposit_asset = configs["whitelisted-deposit-assets"][0]  # USDC.e
+    deposit_token_price_safety_factor = strategy_manager.getDepositTokenPriceSafetyFactor(
+        whitelisted_deposit_asset[1], max_number_of_strategy_actions, configs["buy_frequency"]
+    )
+    current_network_gas_price = __get_current_network_gas_price()
+    deposit_token_decimals = deposit_token.decimals()
+    expected_min_deposit_value = floor(
+        int(
+            int(
+                native_token_price
+                * PERCENTAGE_FACTOR
+                * max_expected_gas_units
+                * max_number_of_strategy_actions
+                * current_network_gas_price
+                * gas_cost_safety_factor
+                * (10 ** (deposit_token_price_decimals + deposit_token_decimals))
+            )
+            / int(
+                deposit_token_price
+                * configs["treasury_percentage_fee_on_balance_update"]
+                * deposit_token_price_safety_factor
+                * (10 ** (18 + native_token_price_decimals))
+            )
+        )
+    )
+    # Assert
+    assert (
+        strategy_manager.simulateMinDepositValue(
+            whitelisted_deposit_asset,
+            configs["buy_percentages"],
+            configs["buy_frequency"],
+            configs["treasury_percentage_fee_on_balance_update"],
+            deposit_token_decimals,
+        )
+        == expected_min_deposit_value
+    )
+
+
 ################################ Contract Validations ################################
 
 
@@ -150,7 +208,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = (configs["dex_main_token_address"], 1, configs["native_token_data_feed_address"], True)
+    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
     # Act/ Assert
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
@@ -194,3 +252,24 @@ def test_set_deposit_token_price_safety_factor_by_non_owner():
         strategy_manager.setDepositTokenPriceSafetyFactor(
             2, 3, new_deposit_token_price_safety_factor, {"from": dev_wallet2}
         )  # > 180 DAYS/BLUE_CHIP
+
+
+################################ Aux Functions ################################
+
+
+def __get_current_network_gas_price() -> int:
+    current_network = network.show_active()
+    current_network_mainnet = (
+        current_network if current_network.split("-")[-1] != "fork" else current_network[: -len("-fork")]
+    )
+    infura_api_key = config["rpcs"]["infura_mainnet"]
+    infura_api_endpoint = f"https://{current_network_mainnet}net.infura.io/v3/{infura_api_key}"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "jsonrpc": "2.0",
+        "method": "eth_gasPrice",
+        "params": [],
+        "id": 1,
+    }
+    response = requests.post(infura_api_endpoint, headers=headers, data=json.dumps(data))
+    return int(response.json()["result"], 16)

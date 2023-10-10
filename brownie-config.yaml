@@ -25,7 +25,6 @@ networks:
     dex_main_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
     native_token_data_feed_address: "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612" # ETH/USD
     deposit_token_address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" #USDC.e
-    deposit_token_data_feed_address: "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3" #USDC/USD
     # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" # USDT
     # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" # ARB
     # deposit_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
@@ -50,6 +49,23 @@ networks:
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
       ]
+    whitelisted-deposit-assets: [
+        # USDC.e:
+        [
+          "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
+          0, # asset_type: STABLE
+          "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
+          True, # is_active
+        ],
+        # WETH:
+        [
+          "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", # asset_address
+          1, # asset_type: ETH_BTC
+          "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", # oracle_address
+          True, # is_active
+        ],
+      ]
+    not-whitelisted-token-address-example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
   arbitrum-main:
     verify: True
     dex_router_address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # ARBITRUM Sushi
@@ -57,7 +73,6 @@ networks:
     dex_main_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
     native_token_data_feed_address: "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612" # ETH/USD
     deposit_token_address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" # USDC.e
-    deposit_token_data_feed_address: "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3" #USDC/USD
     # deposit_token_address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9" # USDT
     # deposit_token_address: "0x912ce59144191c1204e64559fe8253a0e49e6548" # ARB
     # deposit_token_address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1" # WETH
@@ -82,6 +97,23 @@ networks:
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
       ]
+    whitelisted-deposit-assets: [
+        [
+          # USDC.e:
+          "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
+          0, # asset_type: STABLE
+          "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
+          True, # is_active
+        ],
+        [
+          # WETH:
+          "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", # asset_address
+          1, # asset_type: ETH_BTC
+          "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", # oracle_address
+          True, # is_active
+        ],
+      ]
+    not-whitelisted-token-address-example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
 strategy-params:
   buy_percentages: [500, 500] #5% 5%
   buy_frequency: 0 # Daily

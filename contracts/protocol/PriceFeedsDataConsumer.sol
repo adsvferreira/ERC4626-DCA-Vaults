@@ -55,22 +55,4 @@ contract PriceFeedsDataConsumer {
         answer = uint256(answerRaw);
         decimals = uint256(decimalsRaw);
     }
-
-    function getTokenDataFeedLatestPriceParsed(
-        address oracleAddress
-    ) external view returns (uint256 tokenParsedPrice) {
-        (uint256 tokenPrice, uint256 tokenPriceDecimals) = this
-            .getDataFeedLatestPriceAndDecimals(oracleAddress);
-        tokenParsedPrice = tokenPrice / tokenPriceDecimals;
-    }
-
-    function getNativeTokenDataFeedLatestPriceParsed()
-        external
-        view
-        returns (uint256 nativeTokenParsedPrice)
-    {
-        (uint256 nativeTokenPrice, uint256 nativeTokenPriceDecimals) = this
-            .getNativeTokenDataFeedLatestPriceAndDecimals();
-        nativeTokenParsedPrice = nativeTokenPrice / nativeTokenPriceDecimals;
-    }
 }

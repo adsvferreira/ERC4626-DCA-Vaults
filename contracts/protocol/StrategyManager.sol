@@ -234,11 +234,20 @@ contract StrategyManager is IStrategyManager, Ownable {
         uint256 maxNumberOfStrategyActions = StrategyUtils
             .calculateStrategyMaxNumberOfActions(buyPercentagesSum);
         // prettier-ignore
-        minDepositValue = (nativeTokenPrice * PercentageMath.PERCENTAGE_FACTOR * 
-        this.getMaxExpectedGasUnits() * maxNumberOfStrategyActions * gasPriceWei * 
-        this.getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) * (10 ** (tokenPriceDecimals + depositAssetDecimals))) 
-        / (tokenPrice * treasuryPercentageFeeOnBalanceUpdate * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType,maxNumberOfStrategyActions,buyFrequency) * 
-        (10 ** (18 + nativeTokenPriceDecimals)));
+        minDepositValue = (
+            nativeTokenPrice 
+            * PercentageMath.PERCENTAGE_FACTOR 
+            * this.getMaxExpectedGasUnits() 
+            * maxNumberOfStrategyActions 
+            * gasPriceWei 
+            * this.getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) 
+            * (10 ** (tokenPriceDecimals + depositAssetDecimals))
+        ) / (
+            tokenPrice 
+            * treasuryPercentageFeeOnBalanceUpdate 
+            * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
+            * (10 ** (18 + nativeTokenPriceDecimals))
+        );
     }
 
     function _fillNumberOfDaysPerBuyFrequency() private {

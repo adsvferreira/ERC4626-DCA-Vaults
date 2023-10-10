@@ -87,7 +87,7 @@ def test_create_new_vault(configs, deposit_token):
         configs["creator_percentage_fee_on_deposit"],
         configs["treasury_percentage_fee_on_balance_update"],
     )
-    whitelisted_deposit_asset = (configs["deposit_token_address"], 0, configs["deposit_token_data_feed_address"], True)
+    whitelisted_deposit_asset = configs["whitelisted-deposit-assets"][0]
     strategy_manager.addWhitelistedDepositAssets([whitelisted_deposit_asset], {"from": dev_wallet})
     treasury_vault_initial_native_balance = treasury_vault.balance()
     treasury_vault_initial_erc20_balance = deposit_token.balanceOf(treasury_address)
@@ -706,7 +706,7 @@ def test_create_strategy_with_buy_percentage_eq_zero(configs):
     ) = __get_default_strategy_and_init_vault_params(configs)
     strategy_params = list(strategy_params)
     old_buy_token_percentages = strategy_params[0]
-    strategy_params[0] = [0, 10_000]  # 100%, 100%
+    strategy_params[0] = [0, 10_000]  # 0%, 100%
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.createVault(
@@ -726,10 +726,78 @@ def test_create_strategy_with_buy_percentage_lt_zero(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     strategy_params = list(strategy_params)
-    old_buy_token_percentages = strategy_params[0]
-    strategy_params[0] = [-1, 10_000]  # 100%, 100%
+    old_deposit_token_address = strategy_params[2]
+    strategy_params[0] = [-1, 10_000]  # -1%, 100%
     # Act / Assert
     with pytest.raises(OverflowError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    strategy_params[2] = old_deposit_token_address
+
+
+def test_create_strategy_with_not_whitelisted_asset(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_deposit_asset_address = init_vault_from_factory_params[2]
+    init_vault_from_factory_params[2] = configs["not-whitelisted-token-address-example"]
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    init_vault_from_factory_params[2] = old_deposit_asset_address
+
+
+def test_create_strategy_with_deactivated_deposit_asset(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    strategy_manager = StrategyManager[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    init_vault_from_factory_params = list(init_vault_from_factory_params)
+    old_deposit_asset_address = init_vault_from_factory_params[2]
+    init_vault_from_factory_params[2] = configs["not-whitelisted-token-address-example"]
+    # Act / Assert
+    strategy_manager.deactivateWhitelistedDepositAsset(configs["dex_main_token_address"], {"from": dev_wallet})
+    with pytest.raises(exceptions.VirtualMachineError):
+        vaults_factory.createVault(
+            init_vault_from_factory_params,
+            strategy_params,
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        )
+    # Return to old state:
+    init_vault_from_factory_params[2] = old_deposit_asset_address
+    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
+
+
+def test_create_strategy_exceeding_max_number_of_actions(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    vaults_factory = AutomatedVaultsFactory[-1]
+    (
+        strategy_params,
+        init_vault_from_factory_params,
+    ) = __get_default_strategy_and_init_vault_params(configs)
+    strategy_params = list(strategy_params)
+    old_buy_token_percentages = strategy_params[0]
+    strategy_params[0] = [50, 50]  # 0.5%, 0.5% -> 100 Actions
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -779,6 +847,15 @@ def test_deposit_gt_deposit_token_balance():
     # Act / Assert
     with reverts("ERC20: transfer amount exceeds balance"):
         strategy_vault.deposit(GT_BALANCE_TESTING_VALUE, dev_wallet.address, {"from": dev_wallet})
+
+
+def test_deposit_lt_min_deposit_value():
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_vault = get_strategy_vault()
+    # Act / Assert
+    with pytest.raises(exceptions.VirtualMachineError):
+        strategy_vault.deposit(1, dev_wallet.address, {"from": dev_wallet})
 
 
 def test_negative_value_withdraw():

@@ -10,13 +10,4 @@ interface IPriceFeedsDataConsumer {
         external
         view
         returns (uint256, uint256);
-
-    function getTokenDataFeedLatestPriceParsed(
-        address oracleAddress
-    ) external view returns (int256 tokenParsedPrice);
-
-    function getNativeTokenDataFeedLatestPriceParsed()
-        external
-        view
-        returns (int256 nativeTokenParsedPrice);
 }
