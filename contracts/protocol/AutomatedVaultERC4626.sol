@@ -14,10 +14,12 @@ pragma solidity 0.8.21;
 import {Roles} from "../libraries/roles/Roles.sol";
 import {Enums} from "../libraries/types/Enums.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
+import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
+import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -25,15 +27,17 @@ import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20
 error InvalidParameters(string message);
 
 contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
-    using Math for uint256;
     using SafeERC20 for IERC20;
     using PercentageMath for uint256;
 
     uint256 public feesAccruedByCreator;
-    uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 10;
+    uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 5;
 
     ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
     ConfigTypes.StrategyParams public strategyParams;
+
+    IStrategyWorker private _strategyWorker;
+    IStrategyManager private _strategyManager;
 
     address[] public buyAssetAddresses;
     uint256 public buyAssetsLength;
@@ -90,6 +94,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         initMultiAssetVaultParams = _initMultiAssetVaultParams;
         _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
+        _strategyWorker = IStrategyWorker(_strategyParams.strategyWorker);
+        _strategyManager = IStrategyManager(_strategyParams.strategyManager);
         initMultiAssetVaultParams.isActive = false;
         _fillUpdateFrequenciesMap();
     }
@@ -103,7 +109,20 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
         }
-
+        ConfigTypes.WhitelistedDepositAsset
+            memory whitelistedDepositAsset = _strategyManager
+                .getWhitelistedDepositAsset(asset());
+        uint256 minDepositValue = _strategyManager.simulateMinDepositValue(
+            whitelistedDepositAsset,
+            strategyParams.buyPercentages,
+            strategyParams.buyFrequency,
+            initMultiAssetVaultParams.treasuryPercentageFeeOnBalanceUpdate,
+            uint256(decimals())
+        );
+        require(
+            assets >= minDepositValue,
+            "Deposit amount lower that the minimum allowed"
+        );
         uint256 shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
         return shares;

@@ -1,6 +1,6 @@
 import pytest
 from brownie import TreasuryVault, exceptions
-from helpers import get_account_from_pk, check_network_is_mainnet_fork, get_strategy_vault
+from helpers import get_account_from_pk, check_network_is_mainnet_fork
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)

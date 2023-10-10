@@ -1,4 +1,3 @@
-import time
 import pytest
 from typing import List
 from scripts.deploy import deploy_resolver
@@ -75,7 +74,7 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     total_wallet_buy_amount_in_deposit_asset = sum(wallet_buy_amounts)
     treasury_fee_on_balance_update_in_deposit_asset = sum(
         [
-            perc_mul_contracts_simulate(wallet_buy_amount, configs["creator_percentage_fee_on_deposit"])
+            perc_mul_contracts_simulate(wallet_buy_amount, configs["treasury_percentage_fee_on_balance_update"])
             for wallet_buy_amount in wallet_buy_amounts
         ]
     )
