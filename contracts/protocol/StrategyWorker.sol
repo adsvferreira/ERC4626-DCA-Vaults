@@ -13,7 +13,6 @@ import {Roles} from "../libraries/roles/Roles.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";

@@ -13,6 +13,8 @@ import {Errors} from "../libraries/types/Errors.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
+import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
+import {StrategyUtils} from "../libraries/helpers/StrategyUtils.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
@@ -29,11 +31,13 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     mapping(address => address[]) _vaultsPerStrategyWorker;
 
     IUniswapV2Factory public uniswapV2Factory;
+    IStrategyManager public strategyManager;
 
     constructor(
         address _uniswapV2Factory,
         address _dexMainToken,
         address payable _treasury,
+        address _strategyManager,
         uint256 _treasuryFixedFeeOnVaultCreation,
         uint256 _creatorPercentageFeeOnDeposit,
         uint256 _treasuryPercentageFeeOnBalanceUpdate
@@ -44,6 +48,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         creatorPercentageFeeOnDeposit = _creatorPercentageFeeOnDeposit;
         treasuryPercentageFeeOnBalanceUpdate = _treasuryPercentageFeeOnBalanceUpdate;
         uniswapV2Factory = IUniswapV2Factory(_uniswapV2Factory);
+        strategyManager = IStrategyManager(_strategyManager);
     }
 
     function allVaultsLength() external view returns (uint256) {
@@ -53,6 +58,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function createVault(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             calldata initMultiAssetVaultFactoryParams,
+        calldata initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
         if (msg.value < treasuryFixedFeeOnVaultCreation) {
@@ -169,7 +175,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function getUserVaults(
         address user
-    ) public view returns (address[] memory) {
+    ) external view returns (address[] memory) {
         return _userVaults[user];
     }
 
@@ -186,6 +192,22 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             );
         }
 
+        if (address(strategyParams.strategyWorker) == address(0)) {
+            revert Errors.InvalidParameters(
+                "strategyWorker address cannot be zero address"
+            );
+        }
+        if (
+            !strategyManager
+                .getWhitelistedDepositAsset(
+                    initMultiAssetVaultFactoryParams.depositAsset
+                )
+                .isActive
+        ) {
+            revert Errors.InvalidParameters(
+                "Deposit address is not whitelisted"
+            );
+        }
         if (initMultiAssetVaultFactoryParams.depositAsset != dexMainToken) {
             if (
                 uniswapV2Factory.getPair(
@@ -277,6 +299,13 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         // 2 vaults can't the same address, tx would revert at vault instantiation
         _userVaults[creator].push(newVault);
     }
+
+    function _getStrategyTimeLimitsInDays(
+        uint256 maxNumberOfStrategyActions
+    )
+        private
+        returns (Enums.StrategyTimeLimitsInDays strategyTimeLimitsInDays)
+    {}
 
     function _buyPercentagesSum(
         uint256[] memory buyPercentages

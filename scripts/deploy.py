@@ -6,6 +6,8 @@ from brownie import (
     Controller,
     TreasuryVault,
     StrategyWorker,
+    StrategyManager,
+    PriceFeedsDataConsumer,
     AutomatedVaultsFactory,
 )
 
@@ -22,6 +24,7 @@ def main():
     dex_router_address = config["networks"][network.show_active()]["dex_router_address"]
     dex_factory_address = config["networks"][network.show_active()]["dex_factory_address"]
     dex_main_token_address = config["networks"][network.show_active()]["dex_main_token_address"]
+    native_token_data_feed_address = config["networks"][network.show_active()]["native_token_data_feed_address"]
     verify_flag = config["networks"][network.show_active()]["verify"]
 
     # SETUP
@@ -51,6 +54,18 @@ def main():
     strategy_worker_address = strategy_worker.address
 
     print(CONSOLE_SEPARATOR)
+    print("PRICE FEEDS DATA CONSUMER DEPLOYMENT:")
+    price_feeds_data_consumer = deploy_price_feeds_data_consumer(
+        dev_wallet, verify_flag, native_token_data_feed_address
+    )
+    price_feeds_data_consumer_address = price_feeds_data_consumer.address
+
+    print(CONSOLE_SEPARATOR)
+    print("STRATEGY MANAGER DEPLOYMENT:")
+    strategy_manager = deploy_strategy_manager(dev_wallet, verify_flag, price_feeds_data_consumer_address)
+    strategy_manager_address = strategy_manager.address
+
+    print(CONSOLE_SEPARATOR)
     print("STRATEGY VAULTS FACTORY DEPLOYMENT:")
     automated_vaults_factory = deploy_automated_vaults_factory(
         dev_wallet,
@@ -58,6 +73,7 @@ def main():
         dex_factory_address,
         dex_main_token_address,
         treasury_address,
+        strategy_manager_address,
         treasury_fixed_fee_on_vault_creation,
         creator_percentage_fee_on_deposit,
         treasury_percentage_fee_on_balance_update,
@@ -96,12 +112,25 @@ def deploy_strategy_worker(
     return StrategyWorker[-1]
 
 
+def deploy_price_feeds_data_consumer(
+    wallet_address: str, verify_flag: bool, native_token_data_feed_address: str
+) -> Contract:
+    PriceFeedsDataConsumer.deploy(native_token_data_feed_address, {"from": wallet_address}, publish_source=verify_flag)
+    return PriceFeedsDataConsumer[-1]
+
+
+def deploy_strategy_manager(wallet_address: str, verify_flag: bool, price_feeds_data_consumer_address: str) -> Contract:
+    StrategyManager.deploy(price_feeds_data_consumer_address, {"from": wallet_address}, publish_source=verify_flag)
+    return StrategyManager[-1]
+
+
 def deploy_automated_vaults_factory(
     wallet_address: str,
     verify_flag: bool,
     dex_factory_address: str,
     dex_main_token_address: str,
     treasury_address: str,
+    strategy_manager_address: str,
     treasury_fixed_fee_on_vault_creation: int,
     creator_percentage_fee_on_deposit: int,
     treasury_percentage_fee_on_balance_update: int,
@@ -110,6 +139,7 @@ def deploy_automated_vaults_factory(
         dex_factory_address,
         dex_main_token_address,
         treasury_address,
+        strategy_manager_address,
         treasury_fixed_fee_on_vault_creation,
         creator_percentage_fee_on_deposit,
         treasury_percentage_fee_on_balance_update,
