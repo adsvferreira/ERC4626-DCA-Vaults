@@ -58,7 +58,6 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function createVault(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             calldata initMultiAssetVaultFactoryParams,
-        calldata initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
         if (msg.value < treasuryFixedFeeOnVaultCreation) {
@@ -74,7 +73,11 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
         // SEND CREATION FEE TO PROTOCOL TREASURY
         (bool success, ) = treasury.call{value: msg.value}("");
-        require(success, "Fee transfer to treasury address failed.");
+        if (!success) {
+            revert Errors.TransferFailed(
+                "Fee transfer to treasury address failed."
+            );
+        }
         emit Events.TreasuryFeeTransfered(
             address(msg.sender),
             treasuryFixedFeeOnVaultCreation
@@ -154,15 +157,15 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         uint256 startAfter
     ) public view returns (address[] memory) {
         uint256 _vaultAddressLength = getVaultAddress.length;
-        if (
-            limit + startAfter > _vaultAddressLength ||
-            startAfter >= _vaultAddressLength
-        ) {
+        if (startAfter >= _vaultAddressLength) {
             revert Errors.InvalidParameters("Invalid interval.");
         }
         address[] memory vaults = new address[](limit);
         uint256 counter; // This is needed to copy from a storage array to a memory array.
-        uint256 _startLimit = startAfter + limit;
+        uint256 _startLimit;
+        if (startAfter + limit > _vaultAddressLength)
+            _startLimit = startAfter + limit;
+        else _startLimit = _vaultAddressLength;
         for (uint256 i = startAfter; i < _startLimit; ) {
             vaults[counter] = getVaultAddress[i];
             unchecked {
@@ -216,7 +219,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 ) == address(0)
             ) {
                 revert Errors.NoSwapPath(
-                    "Swap path between deposit asser and dex main token not found"
+                    "Swap path between deposit asset and dex main token not found"
                 );
             }
         }
@@ -230,15 +233,25 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 "Swap path not found for at least 1 buy asset"
             );
         }
-        if (
-            _buyPercentagesSum(strategyParams.buyPercentages) >
-            PercentageMath.PERCENTAGE_FACTOR
-        ) {
+
+        uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
+            strategyParams.buyPercentages
+        );
+
+        if (buyPercentagesSum > PercentageMath.PERCENTAGE_FACTOR) {
             revert Errors.InvalidParameters("Buy percentages sum is gt 100");
         }
-        if (address(strategyParams.strategyWorker) == address(0)) {
+
+        if (
+            StrategyUtils.calculateStrategyMaxNumberOfActions(
+                buyPercentagesSum
+            ) >
+            strategyManager.getMaxNumberOfActionsPerFrequency(
+                strategyParams.buyFrequency
+            )
+        ) {
             revert Errors.InvalidParameters(
-                "strategyWorker address cannot be zero address"
+                "Max number of actions exceeds the limit"
             );
         }
     }
@@ -274,9 +287,9 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function _wrapBuyAddressesIntoIERC20(
         address[] memory buyAddresses
     ) private pure returns (IERC20[] memory iERC20instances) {
-        uint256 buyAddressesLength = buyAddresses.length;
-        iERC20instances = new IERC20[](buyAddressesLength);
-        for (uint256 i; i < buyAddressesLength; ) {
+        uint256 _buyAddressesLength = buyAddresses.length;
+        iERC20instances = new IERC20[](_buyAddressesLength);
+        for (uint256 i; i < _buyAddressesLength; ) {
             iERC20instances[i] = IERC20(buyAddresses[i]);
             unchecked {
                 ++i;
@@ -306,20 +319,4 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         private
         returns (Enums.StrategyTimeLimitsInDays strategyTimeLimitsInDays)
     {}
-
-    function _buyPercentagesSum(
-        uint256[] memory buyPercentages
-    ) private pure returns (uint256 buyPercentagesSum) {
-        for (uint256 i; i < buyPercentages.length; ) {
-            if (buyPercentages[i] <= 0) {
-                revert Errors.InvalidParameters(
-                    "Buy percentage must be gt zero"
-                );
-            }
-            buyPercentagesSum += buyPercentages[i];
-            unchecked {
-                ++i;
-            }
-        }
-    }
 }

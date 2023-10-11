@@ -8,10 +8,11 @@ pragma solidity 0.8.21;
  *          DATE:    2023.10.05
  */
 
+import {Errors} from "../libraries/types/Errors.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract PriceFeedsDataConsumer {
-    AggregatorV3Interface nativeTokenDataFeed;
+    AggregatorV3Interface public nativeTokenDataFeed;
 
     constructor(address _nativeTokenOracleAddress) {
         nativeTokenDataFeed = AggregatorV3Interface(_nativeTokenOracleAddress);
@@ -30,10 +31,11 @@ contract PriceFeedsDataConsumer {
             /*uint80 answeredInRound*/
         ) = dataFeed.latestRoundData();
         uint8 decimalsRaw = dataFeed.decimals();
-        require(
-            answerRaw > 0 && decimalsRaw > 0,
-            "Price feed returned zero or negative values"
-        );
+        if (answerRaw <= 0 || decimalsRaw <= 0) {
+            revert Errors.PriceFeedError(
+                "Price feed returned zero or negative values"
+            );
+        }
         answer = uint256(answerRaw);
         decimals = uint256(decimalsRaw);
     }

@@ -34,7 +34,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 5;
 
     ConfigTypes.StrategyParams public strategyParams;
-    ConfigTypes.InitMultiAssetVaultParams public initMultiAssetVaultParams;
+    ConfigTypes.InitMultiAssetVaultParams private _initMultiAssetsVaultParams;
 
     IStrategyWorker private _strategyWorker;
     IStrategyManager private _strategyManager;
@@ -70,19 +70,19 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         )
     {
         if (msg.sender != _initMultiAssetVaultParams.factory) {
-            revert Errors.Forbidden("");
+            revert Errors.Forbidden("Not factory");
         }
         _validateInputs(
             _initMultiAssetVaultParams.buyAssets,
             _strategyParams.buyPercentages
         );
         _setupRole(Roles.STRATEGY_WORKER, _strategyParams.strategyWorker);
-        initMultiAssetVaultParams = _initMultiAssetVaultParams;
-        _populateBuyAssetsData(_initMultiAssetVaultParams);
+        _initMultiAssetsVaultParams = _initMultiAssetVaultParams;
+        _populateBuyAssetsData(_initMultiAssetsVaultParams);
         strategyParams = _strategyParams;
         _strategyWorker = IStrategyWorker(_strategyParams.strategyWorker);
         _strategyManager = IStrategyManager(_strategyParams.strategyManager);
-        initMultiAssetVaultParams.isActive = false;
+        _initMultiAssetsVaultParams.isActive = false;
         _fillUpdateFrequenciesMap();
     }
 
@@ -91,14 +91,6 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         uint256 assets,
         address receiver
     ) public override(ERC4626) returns (uint256) {
-        uint256 maxAssets = maxDeposit(receiver);
-        if (assets > maxAssets) {
-            revert Events.ERC4626ExceededMaxDeposit(
-                receiver,
-                assets,
-                maxAssets
-            );
-        }
         ConfigTypes.WhitelistedDepositAsset
             memory whitelistedDepositAsset = _strategyManager
                 .getWhitelistedDepositAsset(asset());
@@ -106,13 +98,14 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             whitelistedDepositAsset,
             strategyParams.buyPercentages,
             strategyParams.buyFrequency,
-            initMultiAssetVaultParams.treasuryPercentageFeeOnBalanceUpdate,
+            _initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
             uint256(decimals())
         );
-        require(
-            assets >= minDepositValue,
-            "Deposit amount lower that the minimum allowed"
-        );
+        if (assets < minDepositValue) {
+            revert Errors.InvalidParameters(
+                "Deposit amount lower that the minimum allowed"
+            );
+        }
         uint256 shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
         return shares;
@@ -129,7 +122,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         view
         returns (ConfigTypes.InitMultiAssetVaultParams memory)
     {
-        return initMultiAssetVaultParams;
+        return _initMultiAssetsVaultParams;
     }
 
     function getBuyAssetAddresses() external view returns (address[] memory) {
@@ -190,15 +183,15 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         uint256 limit,
         uint256 startAfter
     ) public view returns (address[] memory) {
-        if (
-            limit + startAfter > getDepositorAddress.length ||
-            startAfter >= getDepositorAddress.length
-        ) {
+        uint256 _depositorsLength = getDepositorAddress.length;
+        if (startAfter >= _depositorsLength) {
             revert Errors.InvalidParameters("Invalid interval");
         }
         address[] memory allDepositors = new address[](limit);
+        uint256 _size;
         uint256 counter; // This is needed to copy from a storage array to a memory array.
-        uint256 _size = startAfter + limit;
+        if (startAfter + limit < _depositorsLength) _size = startAfter + limit;
+        else _size = _depositorsLength;
         for (uint256 i = startAfter; i < _size; ) {
             allDepositors[counter] = getDepositorAddress[i];
             unchecked {
@@ -238,13 +231,13 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     function _populateBuyAssetsData(
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams
     ) private {
-        buyAssetsLength = _initMultiAssetVaultParams.buyAssets.length;
-        uint256 _buyAssetsLength = buyAssetsLength;
+        uint256 _buyAssetsLength = _initMultiAssetVaultParams.buyAssets.length;
         for (uint256 i; i < _buyAssetsLength; ) {
             buyAssetAddresses.push(
                 address(_initMultiAssetVaultParams.buyAssets[i])
             );
             unchecked {
+                ++buyAssetsLength;
                 ++i;
             }
         }
@@ -302,7 +295,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         address receiver,
         uint256 shares
     ) internal {
-        if (receiver == initMultiAssetVaultParams.creator) {
+        address creator_ = _initMultiAssetsVaultParams.creator;
+        if (receiver == creator_) {
             if (balanceOf(receiver) == 0 && shares > 0) {
                 getDepositorAddress.push(receiver);
                 ++allDepositorsLength;
@@ -313,7 +307,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         } else {
             // if deposit is not from vault creator, a fee will be removed
             // from depositor and added to creator balance
-            uint256 creatorPercentage = initMultiAssetVaultParams
+            uint256 creatorPercentage = _initMultiAssetsVaultParams
                 .creatorPercentageFeeOnDeposit;
             uint256 depositorPercentage = PercentageMath.PERCENTAGE_FACTOR -
                 creatorPercentage;
@@ -322,7 +316,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
 
             emit Events.CreatorFeeTransfered(
                 address(this),
-                initMultiAssetVaultParams.creator,
+                creator_,
                 receiver,
                 creatorShares
             );
@@ -335,23 +329,18 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             }
             _mint(receiver, depositorShares);
 
-            if (
-                balanceOf(initMultiAssetVaultParams.creator) == 0 &&
-                creatorShares > 0
-            ) {
-                getDepositorAddress.push(initMultiAssetVaultParams.creator);
+            if (balanceOf(creator_) == 0 && creatorShares > 0) {
+                getDepositorAddress.push(creator_);
                 ++allDepositorsLength;
-                _initialDepositBalances[
-                    initMultiAssetVaultParams.creator
-                ] = creatorShares;
-                _updateDepositorBuyAmounts(initMultiAssetVaultParams.creator);
+                _initialDepositBalances[creator_] = creatorShares;
+                _updateDepositorBuyAmounts(creator_);
             }
             feesAccruedByCreator += creatorShares;
-            _mint(initMultiAssetVaultParams.creator, creatorShares);
+            _mint(creator_, creatorShares);
         }
         // Activates vault after 1st deposit
-        if (initMultiAssetVaultParams.isActive == false && shares > 0) {
-            initMultiAssetVaultParams.isActive = true;
+        if (!_initMultiAssetsVaultParams.isActive && shares > 0) {
+            _initMultiAssetsVaultParams.isActive = true;
         }
     }
 

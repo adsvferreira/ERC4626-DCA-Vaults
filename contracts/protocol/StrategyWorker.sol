@@ -13,6 +13,7 @@ import {Roles} from "../libraries/roles/Roles.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
@@ -82,6 +83,9 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             memory initMultiAssetVaultParams = strategyVault
                 .getInitMultiAssetVaultParams();
 
+        uint256 amountToWithdraw;
+        uint256[] memory buyAmountsAfterFee;
+        uint256 totalFee;
         (
             amountToWithdraw,
             buyAmountsAfterFee,
@@ -161,9 +165,9 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             uint256 totalFee
         )
     {
-        uint256 buyAmountsLength = buyAmounts.length;
-        buyAmountsAfterFee = new uint256[](buyAmountsLength);
-        for (uint256 i; i < buyAmountsLength; ) {
+        uint256 _buyAmountsLength = buyAmounts.length;
+        buyAmountsAfterFee = new uint256[](_buyAmountsLength);
+        for (uint256 i; i < _buyAmountsLength; ) {
             uint256 buyAmount = buyAmounts[i];
             uint256 feeAmount = buyAmount.percentMul(actionFeePercentage);
             totalFee += feeAmount;
@@ -185,9 +189,8 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         address[] memory buyAssets,
         uint256[] memory buyAmountsAfterFee
     ) internal returns (uint256[] memory amountsOut) {
-        uint256 buyAssetsLength = buyAssets.length;
-        amountsOut = new uint256[](buyAssetsLength);
         uint256 _buyAssetsLength = buyAssets.length;
+        amountsOut = new uint256[](_buyAssetsLength);
         for (uint256 i; i < _buyAssetsLength; ) {
             uint256 amountOut = _swapToken(
                 depositorAddress,
@@ -266,8 +269,8 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         address[2] memory spenders
     ) private {
         IERC20 token = IERC20(tokenAddress);
-        uint256 spendersLength = spenders.length;
-        for (uint256 i; i < spendersLength; ) {
+        uint256 _spendersLength = spenders.length;
+        for (uint256 i; i < _spendersLength; ) {
             uint256 currentAllowance = token.allowance(
                 address(msg.sender),
                 spenders[i]

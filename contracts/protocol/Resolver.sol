@@ -14,9 +14,9 @@ import {AutomatedVaultERC4626} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
 contract Resolver {
-    IAutomatedVaultsFactory public automatedVaultsFactory;
-
     address public strategyWorkerAddress;
+
+    IAutomatedVaultsFactory public automatedVaultsFactory;
 
     constructor(
         address _automatedVaultsFactoryAddress,
@@ -33,9 +33,9 @@ contract Resolver {
             .getAllVaultsPerStrategyWorker(strategyWorkerAddress);
         bool canExec;
         bytes memory execPayload;
-        uint256 allVaultsLength = allVaults.length;
+        uint256 _allVaultsLength = allVaults.length;
 
-        for (uint256 i; i < allVaultsLength; ) {
+        for (uint256 i; i < _allVaultsLength; ) {
             AutomatedVaultERC4626 vault = AutomatedVaultERC4626(allVaults[i]);
             uint256 _vaulDepositorsLength = vault.allDepositorsLength();
             for (uint256 j; j < _vaulDepositorsLength; ) {

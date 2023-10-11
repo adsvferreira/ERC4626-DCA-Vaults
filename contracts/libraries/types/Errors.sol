@@ -20,4 +20,5 @@ library Errors {
     error NotEnoughEth(string message);
     error TransferFailed(string message);
     error InvalidBalance(string message);
+    error PriceFeedError(string message);
 }

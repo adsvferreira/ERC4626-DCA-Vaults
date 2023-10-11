@@ -967,16 +967,6 @@ def test_get_all_depositors_with_start_after_equal_to_length():
     with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(0, depositors_len)
 
-
-def test_get_all_depositor_addresses_with_limit_bigger_than_length():
-    check_network_is_mainnet_fork()
-    # Vaults have been created in previous tests.
-    vault = get_strategy_vault()
-    depositors_len = vault.allDepositorsLength()
-    with pytest.raises(exceptions.VirtualMachineError):
-        vault.getBatchDepositorAddresses(depositors_len + 1, 0)
-
-
 def test_get_all_depositors_with_start_after_bigger_than_length():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
@@ -984,15 +974,6 @@ def test_get_all_depositors_with_start_after_bigger_than_length():
     depositors_len = vault.allDepositorsLength()
     with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(1, depositors_len + 1)
-
-
-def test_get_all_depositors_with_invalid_limit_with_start_after():
-    check_network_is_mainnet_fork()
-    # Vaults have been created in previous tests.
-    vault = get_strategy_vault()
-    depositors_len = vault.allDepositorsLength()
-    with pytest.raises(exceptions.VirtualMachineError):
-        vault.getBatchDepositorAddresses(2, depositors_len - 1)
 
 
 ################################ Helper Functions ################################
