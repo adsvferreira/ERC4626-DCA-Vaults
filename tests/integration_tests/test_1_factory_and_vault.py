@@ -926,7 +926,7 @@ def test_create_strategy_with_null_strategy_worker_address(configs):
     old_buy_frequency_enum_value = strategy_params[2]
     strategy_params[2] = NULL_ADDRESS
     # Act / Assert
-    with reverts():
+    with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,

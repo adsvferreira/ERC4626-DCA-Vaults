@@ -186,7 +186,7 @@ def test_trigger_strategy_action_before_next_valid_timestamp():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with reverts():
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
