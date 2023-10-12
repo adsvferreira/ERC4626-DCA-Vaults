@@ -14,9 +14,9 @@ import {AutomatedVaultERC4626} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
 contract Resolver {
-    IAutomatedVaultsFactory public automatedVaultsFactory;
-
     address public strategyWorkerAddress;
+
+    IAutomatedVaultsFactory public automatedVaultsFactory;
 
     constructor(
         address _automatedVaultsFactoryAddress,
@@ -31,14 +31,14 @@ contract Resolver {
     function checker() external view returns (bool, bytes memory) {
         address[] memory allVaults = automatedVaultsFactory
             .getAllVaultsPerStrategyWorker(strategyWorkerAddress);
-        uint256 allVaultsLength = allVaults.length;
         bool canExec;
         bytes memory execPayload;
+        uint256 _allVaultsLength = allVaults.length;
 
-        for (uint256 i = 0; i < allVaultsLength; i++) {
+        for (uint256 i; i < _allVaultsLength; ) {
             AutomatedVaultERC4626 vault = AutomatedVaultERC4626(allVaults[i]);
-
-            for (uint256 j = 0; j < vault.allDepositorsLength(); j++) {
+            uint256 _vaulDepositorsLength = vault.allDepositorsLength();
+            for (uint256 j; j < _vaulDepositorsLength; ) {
                 execPayload = abi.encodeWithSelector(
                     IController.triggerStrategyAction.selector,
                     strategyWorkerAddress,
@@ -58,6 +58,12 @@ contract Resolver {
                 if (canExec) {
                     return (canExec, execPayload);
                 }
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
         return (canExec, execPayload);

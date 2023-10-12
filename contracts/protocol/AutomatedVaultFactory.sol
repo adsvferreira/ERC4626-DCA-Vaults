@@ -9,6 +9,8 @@ pragma solidity 0.8.21;
  */
 
 import {Enums} from "../libraries/types/Enums.sol";
+import {Errors} from "../libraries/types/Errors.sol";
+import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
@@ -17,19 +19,7 @@ import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
-error InvalidParameters(string message);
-
 contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
-    event VaultCreated(
-        address indexed creator,
-        address indexed depositAsset,
-        address[] buyAssets,
-        address vaultAddress,
-        uint256[] buyPercentages,
-        Enums.BuyFrequency buyFrequency
-    );
-    event TreasuryFeeTransfered(address creator, uint256 amount);
-
     address payable public treasury;
     address public dexMainToken;
     uint256 public treasuryFixedFeeOnVaultCreation; // AMOUNT IN NATIVE TOKEN CONSIDERING ALL DECIMALS
@@ -70,10 +60,11 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             calldata initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
-        require(
-            msg.value >= treasuryFixedFeeOnVaultCreation,
-            "Ether sent must cover vault creation fee"
-        );
+        if (msg.value < treasuryFixedFeeOnVaultCreation) {
+            revert Errors.InvalidTxEtherAmount(
+                "Ether sent must cover vault creation fee"
+            );
+        }
 
         _validateCreateVaultInputs(
             initMultiAssetVaultFactoryParams,
@@ -82,8 +73,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
         // SEND CREATION FEE TO PROTOCOL TREASURY
         (bool success, ) = treasury.call{value: msg.value}("");
-        require(success, "Fee transfer to treasury address failed.");
-        emit TreasuryFeeTransfered(
+        if (!success) {
+            revert Errors.EtherTransferFailed(
+                "Fee transfer to treasury address failed."
+            );
+        }
+        emit Events.TreasuryFeeTransfered(
             address(msg.sender),
             treasuryFixedFeeOnVaultCreation
         );
@@ -104,7 +99,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             newVaultAddress
         );
         _addUserVault(initMultiAssetVaultParams.creator, newVaultAddress);
-        emit VaultCreated(
+        emit Events.VaultCreated(
             initMultiAssetVaultParams.creator,
             address(initMultiAssetVaultParams.depositAsset),
             initMultiAssetVaultFactoryParams.buyAssets,
@@ -116,13 +111,17 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function allPairsExistForBuyAssets(
         address depositAsset,
-        address[] memory buyAssets
+        address[] calldata buyAssets
     ) external view returns (bool) {
-        for (uint256 i = 0; i < buyAssets.length; i++) {
+        uint256 _buyAssetsLength = buyAssets.length;
+        for (uint256 i; i < _buyAssetsLength; ) {
             if (
                 this.pairExistsForBuyAsset(depositAsset, buyAssets[i]) == false
             ) {
                 return false;
+            }
+            unchecked {
+                ++i;
             }
         }
         return true;
@@ -132,14 +131,16 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         address depositAsset,
         address buyAsset
     ) external view returns (bool) {
-        require(
-            depositAsset != buyAsset,
-            "Buy asset list contains deposit asset"
-        );
-        if (uniswapV2Factory.getPair(depositAsset, buyAsset) != address(0)) {
-            return true;
+        if (depositAsset == buyAsset) {
+            revert Errors.InvalidParameters(
+                "Buy asset list contains deposit asset"
+            );
         }
-        if (uniswapV2Factory.getPair(buyAsset, dexMainToken) != address(0)) {
+
+        if (
+            uniswapV2Factory.getPair(depositAsset, buyAsset) != address(0) ||
+            uniswapV2Factory.getPair(buyAsset, dexMainToken) != address(0)
+        ) {
             return true;
         }
         return false;
@@ -155,17 +156,27 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         uint256 limit,
         uint256 startAfter
     ) public view returns (address[] memory) {
-        if (
-            startAfter >= getVaultAddress.length ||
-            limit + startAfter > getVaultAddress.length
-        ) {
-            revert InvalidParameters("Invalid interval.");
+        uint256 vaultAddressLength = getVaultAddress.length;
+        if (startAfter >= vaultAddressLength) {
+            revert Errors.InvalidParameters("Invalid interval");
         }
-        address[] memory vaults = new address[](limit);
-        uint256 counter = 0; // This is needed to copy from a storage array to a memory array.
-        for (uint256 i = startAfter; i < startAfter + limit; i++) {
+        uint256 counter; // This is needed to copy from a storage array to a memory array.
+        uint256 startLimit;
+        uint256 outputLen;
+        if (startAfter + limit <= vaultAddressLength) {
+            startLimit = startAfter + limit;
+            outputLen = limit;
+        } else {
+            startLimit = vaultAddressLength;
+            outputLen = vaultAddressLength - startAfter;
+        }
+        address[] memory vaults = new address[](outputLen);
+        for (uint256 i = startAfter; i < startLimit; ) {
             vaults[counter] = getVaultAddress[i];
-            counter += 1;
+            unchecked {
+                ++i;
+                ++counter;
+            }
         }
         return vaults;
     }
@@ -181,55 +192,69 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             memory initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams memory strategyParams
     ) private view {
-        require(
-            address(initMultiAssetVaultFactoryParams.depositAsset) !=
-                address(0),
-            "Deposit address cannot be zero address"
-        );
-        require(
-            address(strategyParams.strategyWorker) != address(0),
-            "strategyWorker address cannot be zero address"
-        );
-        require(
-            strategyManager
+        if (
+            address(initMultiAssetVaultFactoryParams.depositAsset) == address(0)
+        ) {
+            revert Errors.InvalidParameters(
+                "Deposit address cannot be zero address"
+            );
+        }
+        if (address(strategyParams.strategyWorker) == address(0)) {
+            revert Errors.InvalidParameters(
+                "strategyWorker address cannot be zero address"
+            );
+        }
+        if (
+            !strategyManager
                 .getWhitelistedDepositAsset(
                     initMultiAssetVaultFactoryParams.depositAsset
                 )
-                .isActive == true,
-            "Deposit address is not whitelisted"
-        );
+                .isActive
+        ) {
+            revert Errors.InvalidParameters(
+                "Deposit address is not whitelisted"
+            );
+        }
         if (initMultiAssetVaultFactoryParams.depositAsset != dexMainToken) {
-            require(
+            if (
                 uniswapV2Factory.getPair(
                     initMultiAssetVaultFactoryParams.depositAsset,
                     dexMainToken
-                ) != address(0),
-                "Swap path between deposit asser and dex main token not found"
-            );
+                ) == address(0)
+            ) {
+                revert Errors.SwapPathNotFound(
+                    "Swap path between deposit asset and dex main token not found"
+                );
+            }
         }
-        require(
-            this.allPairsExistForBuyAssets(
+        if (
+            !this.allPairsExistForBuyAssets(
                 initMultiAssetVaultFactoryParams.depositAsset,
                 initMultiAssetVaultFactoryParams.buyAssets
-            ),
-            "Swap path not found for at least 1 buy asset"
-        );
+            )
+        ) {
+            revert Errors.SwapPathNotFound(
+                "Swap path not found for at least 1 buy asset"
+            );
+        }
         uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
             strategyParams.buyPercentages
         );
-        require(
-            buyPercentagesSum <= PercentageMath.PERCENTAGE_FACTOR,
-            "Buy percentages sum is gt 100"
-        );
-        require(
+        if (buyPercentagesSum > PercentageMath.PERCENTAGE_FACTOR) {
+            revert Errors.InvalidParameters("Buy percentages sum is gt 100");
+        }
+        if (
             StrategyUtils.calculateStrategyMaxNumberOfActions(
                 buyPercentagesSum
-            ) <=
-                strategyManager.getMaxNumberOfActionsPerFrequency(
-                    strategyParams.buyFrequency
-                ),
-            "Max number of actions exceeds the limit"
-        );
+            ) >
+            strategyManager.getMaxNumberOfActionsPerFrequency(
+                strategyParams.buyFrequency
+            )
+        ) {
+            revert Errors.InvalidParameters(
+                "Max number of actions exceeds the limit"
+            );
+        }
     }
 
     function _buildInitMultiAssetVaultParams(
@@ -263,23 +288,28 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function _wrapBuyAddressesIntoIERC20(
         address[] memory buyAddresses
     ) private pure returns (IERC20[] memory iERC20instances) {
-        uint256 buyAddressesLength = buyAddresses.length;
-        iERC20instances = new IERC20[](buyAddressesLength);
-        for (uint256 i = 0; i < buyAddressesLength; i++) {
+        uint256 _buyAddressesLength = buyAddresses.length;
+        iERC20instances = new IERC20[](_buyAddressesLength);
+        for (uint256 i; i < _buyAddressesLength; ) {
             iERC20instances[i] = IERC20(buyAddresses[i]);
+            unchecked {
+                ++i;
+            }
         }
         return iERC20instances;
     }
 
     function _addUserVault(address creator, address newVault) private {
-        require(
-            creator != address(0),
-            "Null Address is not a valid creator address"
-        );
-        require(
-            newVault != address(0),
-            "Null Address is not a valid newVault address"
-        );
+        if (creator == address(0)) {
+            revert Errors.InvalidParameters(
+                "Null Address is not a valid creator address"
+            );
+        }
+        if (newVault == address(0)) {
+            revert Errors.InvalidParameters(
+                "Null Address is not a valid newVault address"
+            );
+        }
         // 2 vaults can't the same address, tx would revert at vault instantiation
         _userVaults[creator].push(newVault);
     }

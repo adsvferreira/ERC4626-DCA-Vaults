@@ -10,6 +10,7 @@ pragma solidity 0.8.21;
 
 import {Enums} from "../libraries/types/Enums.sol";
 import {Roles} from "../libraries/roles/Roles.sol";
+import {Errors} from "../libraries/types/Errors.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
@@ -51,8 +52,8 @@ contract StrategyManager is IStrategyManager, Ownable {
     function addWhitelistedDepositAssets(
         ConfigTypes.WhitelistedDepositAsset[] calldata depositAssetsToWhitelist
     ) external onlyOwner {
-        uint256 assetsLength = depositAssetsToWhitelist.length;
-        for (uint256 i = 0; i < assetsLength; i++) {
+        uint256 _assetsLength = depositAssetsToWhitelist.length;
+        for (uint256 i; i < _assetsLength; ) {
             if (
                 _whitelistedDepositAssets[
                     depositAssetsToWhitelist[i].assetAddress
@@ -65,6 +66,9 @@ contract StrategyManager is IStrategyManager, Ownable {
             _whitelistedDepositAssets[
                 depositAssetsToWhitelist[i].assetAddress
             ] = depositAssetsToWhitelist[i];
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -77,10 +81,11 @@ contract StrategyManager is IStrategyManager, Ownable {
     function setMaxExpectedGasUnits(
         uint256 maxExpectedGasUnits
     ) external onlyOwner {
-        require(
-            maxExpectedGasUnits > 0,
-            "Max expected gas units value must be greater than zero"
-        );
+        if (maxExpectedGasUnits <= 0) {
+            revert Errors.InvalidParameters(
+                "Max expected gas units value must be greater than zero"
+            );
+        }
         _MAX_EXPECTED_GAS_UNITS_WEI = maxExpectedGasUnits;
     }
 
@@ -138,10 +143,11 @@ contract StrategyManager is IStrategyManager, Ownable {
         uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
             buyFrequency
         ] * buyFrequencyInDays;
-        require(
-            maxNumberOfDays <= maxNumberOfDaysAllowed,
-            "Max number of actions exceeds the limit"
-        );
+        if (maxNumberOfDays > maxNumberOfDaysAllowed) {
+            revert Errors.InvalidParameters(
+                "Max number of actions exceeds the limit"
+            );
+        }
         if (maxNumberOfDays <= 30) {
             return _gasCostSafetyFactors[Enums.StrategyTimeLimitsInDays.THIRTY];
         }
@@ -173,10 +179,11 @@ contract StrategyManager is IStrategyManager, Ownable {
         uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
             buyFrequency
         ] * buyFrequencyInDays;
-        require(
-            maxNumberOfDays <= maxNumberOfDaysAllowed,
-            "Max number of actions exceeds the limit"
-        );
+        if (maxNumberOfDays > maxNumberOfDaysAllowed) {
+            revert Errors.InvalidParameters(
+                "Max number of actions exceeds the limit"
+            );
+        }
         if (maxNumberOfDays <= 30) {
             return
                 _depositTokenPriceSafetyFactors[assetType][
