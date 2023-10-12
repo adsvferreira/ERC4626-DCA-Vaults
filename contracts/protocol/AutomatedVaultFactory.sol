@@ -156,17 +156,22 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         uint256 limit,
         uint256 startAfter
     ) public view returns (address[] memory) {
-        uint256 _vaultAddressLength = getVaultAddress.length;
-        if (startAfter >= _vaultAddressLength) {
-            revert Errors.InvalidParameters("Invalid interval.");
+        uint256 vaultAddressLength = getVaultAddress.length;
+        if (startAfter >= vaultAddressLength) {
+            revert Errors.InvalidParameters("Invalid interval");
         }
-        address[] memory vaults = new address[](limit);
         uint256 counter; // This is needed to copy from a storage array to a memory array.
-        uint256 _startLimit;
-        if (startAfter + limit > _vaultAddressLength)
-            _startLimit = startAfter + limit;
-        else _startLimit = _vaultAddressLength;
-        for (uint256 i = startAfter; i < _startLimit; ) {
+        uint256 startLimit;
+        uint256 outputLen;
+        if (startAfter + limit <= vaultAddressLength) {
+            startLimit = startAfter + limit;
+            outputLen = limit;
+        } else {
+            startLimit = vaultAddressLength;
+            outputLen = vaultAddressLength - startAfter;
+        }
+        address[] memory vaults = new address[](outputLen);
+        for (uint256 i = startAfter; i < startLimit; ) {
             vaults[counter] = getVaultAddress[i];
             unchecked {
                 ++i;

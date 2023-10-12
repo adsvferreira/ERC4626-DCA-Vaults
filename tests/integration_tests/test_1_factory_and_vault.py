@@ -459,6 +459,15 @@ def test_get_all_depositor_addresses_with_offset():
     assert len(vault.getBatchDepositorAddresses(depositors_len - 2, 0)) == depositors_len - 2
 
 
+def test_get_all_depositor_addresses_with_limit_bigger_than_length():
+    check_network_is_mainnet_fork()
+    # Vaults have been created in previous tests.
+    vault = get_strategy_vault()
+    depositors_len = vault.allDepositorsLength()
+    depositors = vault.getBatchDepositorAddresses(depositors_len + 1, 1)
+    assert len(depositors) == depositors_len - 1
+
+
 def test_get_all_vaults(configs):
     check_network_is_mainnet_fork()
     vaults_factory = AutomatedVaultsFactory[-1]
@@ -470,7 +479,15 @@ def test_get_all_vaults_with_offset():
     vaults_factory = AutomatedVaultsFactory[-1]
     # 2 vaults have been created at this point
     n_requested_vaults = 1
-    assert len(vaults_factory.getBatchVaults(1, 1)) == n_requested_vaults
+    assert len(vaults_factory.getBatchVaults(99, 1)) == n_requested_vaults
+
+
+def test_get_all_vaults_with_limit_bigger_than_vault_length():
+    vaults_factory = AutomatedVaultsFactory[-1]
+    vaults_len = vaults_factory.allVaultsLength()
+    # Act / Assert
+    vaults = vaults_factory.getBatchVaults(vaults_len + 1, 1)
+    assert len(vaults) == vaults_len - 1
 
 
 ################################ Contract Validations ################################
@@ -927,14 +944,6 @@ def test_set_last_update_by_not_worker_address():
         strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
 
-def test_get_all_vaults_with_limit_bigger_than_vault_length():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = vaults_factory.allVaultsLength()
-    # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
-        vaults = vaults_factory.getBatchVaults(n_vaults + 1, 0)
-
-
 def test_get_all_vaults_with_start_after_equal_to_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
@@ -951,14 +960,6 @@ def test_get_all_vaults_with_start_after_bigger_than_vault_length():
         vaults_factory.getBatchVaults(1, n_vaults + 1)
 
 
-def test_get_all_vaults_with_invalid_limit_with_start_after():
-    vaults_factory = AutomatedVaultsFactory[-1]
-    n_vaults = vaults_factory.allVaultsLength()
-    # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
-        vaults_factory.getBatchVaults(vaults_factory.allVaultsLength() - 1, 2)
-
-
 def test_get_all_depositors_with_start_after_equal_to_length():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
@@ -966,6 +967,7 @@ def test_get_all_depositors_with_start_after_equal_to_length():
     depositors_len = vault.allDepositorsLength()
     with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(0, depositors_len)
+
 
 def test_get_all_depositors_with_start_after_bigger_than_length():
     check_network_is_mainnet_fork()

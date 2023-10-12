@@ -183,16 +183,22 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         uint256 limit,
         uint256 startAfter
     ) public view returns (address[] memory) {
-        uint256 _depositorsLength = getDepositorAddress.length;
-        if (startAfter >= _depositorsLength) {
+        uint256 depositorsLength = getDepositorAddress.length;
+        if (startAfter >= depositorsLength) {
             revert Errors.InvalidParameters("Invalid interval");
         }
-        address[] memory allDepositors = new address[](limit);
-        uint256 _size;
         uint256 counter; // This is needed to copy from a storage array to a memory array.
-        if (startAfter + limit < _depositorsLength) _size = startAfter + limit;
-        else _size = _depositorsLength;
-        for (uint256 i = startAfter; i < _size; ) {
+        uint256 startLimit;
+        uint256 outputLen;
+        if (startAfter + limit <= depositorsLength) {
+            startLimit = startAfter + limit;
+            outputLen = limit;
+        } else {
+            startLimit = depositorsLength;
+            outputLen = depositorsLength - startAfter;
+        }
+        address[] memory allDepositors = new address[](outputLen);
+        for (uint256 i = startAfter; i < startLimit; ) {
             allDepositors[counter] = getDepositorAddress[i];
             unchecked {
                 ++i;
