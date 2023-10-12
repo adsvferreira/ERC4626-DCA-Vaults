@@ -4,7 +4,9 @@ pragma solidity 0.8.21;
 
 library Errors {
     error Forbidden(string message);
+
     error InvalidParameters(string message);
+
     /**
      * @dev Attempted to deposit more assets than the max amount for `receiver`.
      */
@@ -14,11 +16,21 @@ library Errors {
         uint256 max
     );
 
-    // Could not find a path between 2 assets.
-    error NoSwapPath(string message);
-    error InvalidFee(string message);
-    error NotEnoughEth(string message);
-    error TransferFailed(string message);
-    error InvalidBalance(string message);
+    error SwapPathNotFound(string message);
+
+    error InvalidTxEtherAmount(string message);
+
+    error NotEnoughEther(string message);
+
+    error EtherTransferFailed(string message);
+
+    error TokenTransferFailed(string message);
+
+    error InvalidTokenBalance(string message);
+
     error PriceFeedError(string message);
+
+    error UpdateConditionsNotMet();
+
+    error ZeroOrNegativeVaultWithdrawAmount();
 }

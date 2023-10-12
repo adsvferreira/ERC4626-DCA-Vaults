@@ -28,11 +28,11 @@ contract TreasuryVault is ITreasuryVault, Ownable {
 
     function withdrawNative(uint256 amount) external onlyOwner {
         if (amount > address(this).balance) {
-            revert Errors.NotEnoughEth("Insufficient balance");
+            revert Errors.NotEnoughEther("Insufficient balance");
         }
         (bool success, ) = owner().call{value: amount}("");
         if (!success) {
-            revert Errors.TransferFailed("Ether transfer failed");
+            revert Errors.EtherTransferFailed("Ether transfer failed");
         }
         emit Events.NativeWithdrawal(owner(), amount);
     }
@@ -48,7 +48,7 @@ contract TreasuryVault is ITreasuryVault, Ownable {
     ) external onlyOwner {
         IERC20 token = IERC20(tokenAddress);
         if (amount > token.balanceOf(address(this))) {
-            revert Errors.InvalidBalance("Insufficient balance");
+            revert Errors.InvalidTokenBalance("Insufficient balance");
         }
         (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
@@ -58,7 +58,7 @@ contract TreasuryVault is ITreasuryVault, Ownable {
             )
         );
         if (!success) {
-            revert Errors.InvalidBalance("Token transfer failed");
+            revert Errors.TokenTransferFailed("Token transfer failed");
         }
         emit Events.ERC20Withdrawal(owner(), tokenAddress, amount);
     }

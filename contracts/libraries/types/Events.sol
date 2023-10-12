@@ -14,15 +14,6 @@ library Events {
         uint256 shares
     );
 
-    /**
-     * @dev Attempted to deposit more assets than the max amount for `receiver`.
-     */
-    error ERC4626ExceededMaxDeposit(
-        address receiver,
-        uint256 assets,
-        uint256 max
-    );
-
     // VAULT FACTORY
 
     event VaultCreated(
@@ -33,7 +24,6 @@ library Events {
         uint256[] buyPercentages,
         Enums.BuyFrequency buyFrequency
     );
-
     event TreasuryFeeTransfered(address creator, uint256 amount);
 
     // TREASURY VAULT
@@ -46,5 +36,17 @@ library Events {
         address indexed owner,
         address indexed token,
         uint256 amount
+    );
+
+    // STRATEGY WORKER
+
+    event StrategyActionExecuted(
+        address indexed vault,
+        address indexed depositor,
+        address tokenIn,
+        uint256 tokenInAmount,
+        address[] tokensOut,
+        uint256[] tokensOutAmounts,
+        uint256 feeAmount
     );
 }

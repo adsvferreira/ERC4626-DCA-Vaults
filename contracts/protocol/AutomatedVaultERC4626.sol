@@ -33,8 +33,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     uint256 public feesAccruedByCreator;
     uint8 public constant MAX_NUMBER_OF_BUY_ASSETS = 5;
 
-    ConfigTypes.StrategyParams public strategyParams;
-    ConfigTypes.InitMultiAssetVaultParams private _initMultiAssetsVaultParams;
+    ConfigTypes.StrategyParams private strategyParams;
+    ConfigTypes.InitMultiAssetVaultParams private initMultiAssetsVaultParams;
 
     IStrategyWorker private _strategyWorker;
     IStrategyManager private _strategyManager;
@@ -77,12 +77,12 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             _strategyParams.buyPercentages
         );
         _setupRole(Roles.STRATEGY_WORKER, _strategyParams.strategyWorker);
-        _initMultiAssetsVaultParams = _initMultiAssetVaultParams;
-        _populateBuyAssetsData(_initMultiAssetsVaultParams);
+        initMultiAssetsVaultParams = _initMultiAssetVaultParams;
+        _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
         _strategyWorker = IStrategyWorker(_strategyParams.strategyWorker);
         _strategyManager = IStrategyManager(_strategyParams.strategyManager);
-        _initMultiAssetsVaultParams.isActive = false;
+        initMultiAssetsVaultParams.isActive = false;
         _fillUpdateFrequenciesMap();
     }
 
@@ -98,7 +98,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             whitelistedDepositAsset,
             strategyParams.buyPercentages,
             strategyParams.buyFrequency,
-            _initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
+            initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
             uint256(decimals())
         );
         if (assets < minDepositValue) {
@@ -122,7 +122,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         view
         returns (ConfigTypes.InitMultiAssetVaultParams memory)
     {
-        return _initMultiAssetsVaultParams;
+        return initMultiAssetsVaultParams;
     }
 
     function getBuyAssetAddresses() external view returns (address[] memory) {
@@ -237,13 +237,13 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
     function _populateBuyAssetsData(
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams
     ) private {
-        uint256 _buyAssetsLength = _initMultiAssetVaultParams.buyAssets.length;
+        buyAssetsLength = _initMultiAssetVaultParams.buyAssets.length;
+        uint256 _buyAssetsLength = buyAssetsLength;
         for (uint256 i; i < _buyAssetsLength; ) {
             buyAssetAddresses.push(
                 address(_initMultiAssetVaultParams.buyAssets[i])
             );
             unchecked {
-                ++buyAssetsLength;
                 ++i;
             }
         }
@@ -301,8 +301,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         address receiver,
         uint256 shares
     ) internal {
-        address creator_ = _initMultiAssetsVaultParams.creator;
-        if (receiver == creator_) {
+        address creator = initMultiAssetsVaultParams.creator;
+        if (receiver == creator) {
             if (balanceOf(receiver) == 0 && shares > 0) {
                 getDepositorAddress.push(receiver);
                 ++allDepositorsLength;
@@ -313,7 +313,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         } else {
             // if deposit is not from vault creator, a fee will be removed
             // from depositor and added to creator balance
-            uint256 creatorPercentage = _initMultiAssetsVaultParams
+            uint256 creatorPercentage = initMultiAssetsVaultParams
                 .creatorPercentageFeeOnDeposit;
             uint256 depositorPercentage = PercentageMath.PERCENTAGE_FACTOR -
                 creatorPercentage;
@@ -322,7 +322,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
 
             emit Events.CreatorFeeTransfered(
                 address(this),
-                creator_,
+                creator,
                 receiver,
                 creatorShares
             );
@@ -335,18 +335,18 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             }
             _mint(receiver, depositorShares);
 
-            if (balanceOf(creator_) == 0 && creatorShares > 0) {
-                getDepositorAddress.push(creator_);
+            if (balanceOf(creator) == 0 && creatorShares > 0) {
+                getDepositorAddress.push(creator);
                 ++allDepositorsLength;
-                _initialDepositBalances[creator_] = creatorShares;
-                _updateDepositorBuyAmounts(creator_);
+                _initialDepositBalances[creator] = creatorShares;
+                _updateDepositorBuyAmounts(creator);
             }
             feesAccruedByCreator += creatorShares;
-            _mint(creator_, creatorShares);
+            _mint(creator, creatorShares);
         }
         // Activates vault after 1st deposit
-        if (!_initMultiAssetsVaultParams.isActive && shares > 0) {
-            _initMultiAssetsVaultParams.isActive = true;
+        if (!initMultiAssetsVaultParams.isActive && shares > 0) {
+            initMultiAssetsVaultParams.isActive = true;
         }
     }
 

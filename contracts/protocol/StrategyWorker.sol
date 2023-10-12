@@ -10,6 +10,8 @@ pragma solidity 0.8.21;
 */
 
 import {Roles} from "../libraries/roles/Roles.sol";
+import {Events} from "../libraries/types/Events.sol";
+import {Errors} from "../libraries/types/Errors.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
@@ -22,7 +24,6 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract StrategyWorker is IStrategyWorker, AccessControl {
-    using Math for uint256;
     using SafeERC20 for IERC20;
     using PercentageMath for uint256;
 
@@ -31,19 +32,6 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
     address public dexRouter;
     address public controller;
     address public dexMainToken;
-
-    event StrategyActionExecuted(
-        address indexed vault,
-        address indexed depositor,
-        address tokenIn,
-        uint256 tokenInAmount,
-        address[] tokensOut,
-        uint256[] tokensOutAmounts,
-        uint256 feeAmount
-    );
-
-    error CannotUpdate();
-    error BuyIsLowerOrZero();
 
     constructor(
         address _dexRouter,
@@ -70,7 +58,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
                 strategyVault.getUpdateFrequencyTimestamp() &&
             strategyVault.lastUpdateOf(depositorAddress) != 0
         ) {
-            revert CannotUpdate();
+            revert Errors.UpdateConditionsNotMet();
         }
 
         (
@@ -123,7 +111,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             depositAsset
         );
 
-        emit StrategyActionExecuted(
+        emit Events.StrategyActionExecuted(
             strategyVaultAddress,
             depositorAddress,
             depositAsset,
@@ -165,9 +153,9 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             uint256 totalFee
         )
     {
-        uint256 _buyAmountsLength = buyAmounts.length;
-        buyAmountsAfterFee = new uint256[](_buyAmountsLength);
-        for (uint256 i; i < _buyAmountsLength; ) {
+        uint256 buyAmountsLength = buyAmounts.length;
+        buyAmountsAfterFee = new uint256[](buyAmountsLength);
+        for (uint256 i; i < buyAmountsLength; ) {
             uint256 buyAmount = buyAmounts[i];
             uint256 feeAmount = buyAmount.percentMul(actionFeePercentage);
             totalFee += feeAmount;
@@ -179,7 +167,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
             }
         }
         if (amountToWithdraw <= 0) {
-            revert BuyIsLowerOrZero();
+            revert Errors.ZeroOrNegativeVaultWithdrawAmount();
         }
     }
 
@@ -189,9 +177,9 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         address[] memory buyAssets,
         uint256[] memory buyAmountsAfterFee
     ) internal returns (uint256[] memory amountsOut) {
-        uint256 _buyAssetsLength = buyAssets.length;
-        amountsOut = new uint256[](_buyAssetsLength);
-        for (uint256 i; i < _buyAssetsLength; ) {
+        uint256 buyAssetsLength = buyAssets.length;
+        amountsOut = new uint256[](buyAssetsLength);
+        for (uint256 i; i < buyAssetsLength; ) {
             uint256 amountOut = _swapToken(
                 depositorAddress,
                 depositAsset,
@@ -269,8 +257,8 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         address[2] memory spenders
     ) private {
         IERC20 token = IERC20(tokenAddress);
-        uint256 _spendersLength = spenders.length;
-        for (uint256 i; i < _spendersLength; ) {
+        uint256 spendersLength = spenders.length;
+        for (uint256 i; i < spendersLength; ) {
             uint256 currentAllowance = token.allowance(
                 address(msg.sender),
                 spenders[i]

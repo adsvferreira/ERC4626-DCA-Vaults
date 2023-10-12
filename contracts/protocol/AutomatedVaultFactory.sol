@@ -61,7 +61,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         ConfigTypes.StrategyParams calldata strategyParams
     ) external payable returns (address newVaultAddress) {
         if (msg.value < treasuryFixedFeeOnVaultCreation) {
-            revert Errors.InvalidFee(
+            revert Errors.InvalidTxEtherAmount(
                 "Ether sent must cover vault creation fee"
             );
         }
@@ -74,7 +74,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         // SEND CREATION FEE TO PROTOCOL TREASURY
         (bool success, ) = treasury.call{value: msg.value}("");
         if (!success) {
-            revert Errors.TransferFailed(
+            revert Errors.EtherTransferFailed(
                 "Fee transfer to treasury address failed."
             );
         }
@@ -199,7 +199,6 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 "Deposit address cannot be zero address"
             );
         }
-
         if (address(strategyParams.strategyWorker) == address(0)) {
             revert Errors.InvalidParameters(
                 "strategyWorker address cannot be zero address"
@@ -223,7 +222,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                     dexMainToken
                 ) == address(0)
             ) {
-                revert Errors.NoSwapPath(
+                revert Errors.SwapPathNotFound(
                     "Swap path between deposit asset and dex main token not found"
                 );
             }
@@ -234,19 +233,16 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 initMultiAssetVaultFactoryParams.buyAssets
             )
         ) {
-            revert Errors.InvalidParameters(
+            revert Errors.SwapPathNotFound(
                 "Swap path not found for at least 1 buy asset"
             );
         }
-
         uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
             strategyParams.buyPercentages
         );
-
         if (buyPercentagesSum > PercentageMath.PERCENTAGE_FACTOR) {
             revert Errors.InvalidParameters("Buy percentages sum is gt 100");
         }
-
         if (
             StrategyUtils.calculateStrategyMaxNumberOfActions(
                 buyPercentagesSum
