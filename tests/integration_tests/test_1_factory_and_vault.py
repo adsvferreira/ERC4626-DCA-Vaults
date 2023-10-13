@@ -87,7 +87,7 @@ def test_create_new_vault(configs, deposit_token):
         configs["creator_percentage_fee_on_deposit"],
         configs["treasury_percentage_fee_on_balance_update"],
     )
-    whitelisted_deposit_asset = configs["whitelisted-deposit-assets"][0]
+    whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]
     strategy_manager.addWhitelistedDepositAssets([whitelisted_deposit_asset], {"from": dev_wallet})
     treasury_vault_initial_native_balance = treasury_vault.balance()
     treasury_vault_initial_erc20_balance = deposit_token.balanceOf(treasury_address)
@@ -765,7 +765,7 @@ def test_create_strategy_with_not_whitelisted_asset(configs):
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
     old_deposit_asset_address = init_vault_from_factory_params[2]
-    init_vault_from_factory_params[2] = configs["not-whitelisted-token-address-example"]
+    init_vault_from_factory_params[2] = configs["not_whitelisted_token_address_example"]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.createVault(
@@ -787,9 +787,11 @@ def test_create_strategy_with_deactivated_deposit_asset(configs):
     ) = __get_default_strategy_and_init_vault_params(configs)
     init_vault_from_factory_params = list(init_vault_from_factory_params)
     old_deposit_asset_address = init_vault_from_factory_params[2]
-    init_vault_from_factory_params[2] = configs["not-whitelisted-token-address-example"]
+    init_vault_from_factory_params[2] = configs["not_whitelisted_token_address_example"]
     # Act / Assert
-    strategy_manager.deactivateWhitelistedDepositAsset(configs["dex_main_token_address"], {"from": dev_wallet})
+    strategy_manager.deactivateWhitelistedDepositAsset(
+        configs["whitelisted_deposit_assets"][4][0], {"from": dev_wallet}
+    )
     with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.createVault(
             init_vault_from_factory_params,
@@ -798,7 +800,7 @@ def test_create_strategy_with_deactivated_deposit_asset(configs):
         )
     # Return to old state:
     init_vault_from_factory_params[2] = old_deposit_asset_address
-    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][4]
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
 
 

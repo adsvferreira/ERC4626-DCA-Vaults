@@ -3,6 +3,7 @@ from math import floor
 from brownie import AutomatedVaultERC4626, AutomatedVaultsFactory, accounts, config, network
 
 NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
+CONSOLE_SEPARATOR = "--------------------------------------------------------------------------"
 
 
 def get_account_from_pk(index: int) -> object:

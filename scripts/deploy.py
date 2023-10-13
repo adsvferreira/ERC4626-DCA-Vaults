@@ -1,5 +1,5 @@
 from brownie import config, network
-from helpers import get_account_from_pk
+from helpers import get_account_from_pk, CONSOLE_SEPARATOR
 from brownie import (
     Contract,
     Resolver,
@@ -10,8 +10,6 @@ from brownie import (
     PriceFeedsDataConsumer,
     AutomatedVaultsFactory,
 )
-
-CONSOLE_SEPARATOR = "--------------------------------------------------------------------------"
 
 
 def main():
@@ -83,6 +81,10 @@ def main():
     print(CONSOLE_SEPARATOR)
     print("RESOLVER DEPLOYMENT:")
     deploy_resolver(dev_wallet, verify_flag, automated_vaults_factory_address, strategy_worker_address)
+
+    print(CONSOLE_SEPARATOR)
+    print("WHITELISTING DEPOSIT ASSETS:")
+    whitelist_deposit_assets(dev_wallet)
 
 
 def deploy_treasury_vault(wallet_address: str, verify_flag: bool) -> Contract:
@@ -159,3 +161,9 @@ def deploy_resolver(
         publish_source=verify_flag,
     )
     return Resolver[-1]
+
+
+def whitelist_deposit_assets(wallet_address: str):
+    strategy_manager = StrategyManager[-1]
+    assets_to_whitelist = config["networks"][network.show_active()]["whitelisted_deposit_assets"]
+    strategy_manager.addWhitelistedDepositAssets(assets_to_whitelist, {"from": wallet_address})

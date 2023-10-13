@@ -13,7 +13,7 @@ def test_get_prices_for_all_whitelisted_addresses(configs):
     # Arrange
     price_feeds_data_consumer = PriceFeedsDataConsumer[-1]
     # Act/Assert
-    for _, _, oracle_address, _ in configs["whitelisted-deposit-assets"]:
+    for _, _, oracle_address, _ in configs["whitelisted_deposit_assets"]:
         token_price, token_price_decimals = price_feeds_data_consumer.getDataFeedLatestPriceAndDecimals(oracle_address)
         assert token_price > 0
         assert token_price_decimals > 0
