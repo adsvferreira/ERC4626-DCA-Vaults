@@ -27,13 +27,13 @@ def test_whitelist_new_address_by_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][4]
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
     assert strategy_manager.getWhitelistedDepositAssetAddresses() == [
-        configs["deposit_token_address"],
-        configs["dex_main_token_address"],
+        configs["whitelisted_deposit_assets"][0][0],
+        configs["whitelisted_deposit_assets"][4][0],
     ]
 
 
@@ -41,14 +41,17 @@ def test_repeated_address_by_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = (configs["dex_main_token_address"], 2, configs["native_token_data_feed_address"], True)
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][4]
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
     assert (
         len(strategy_manager.getWhitelistedDepositAssetAddresses()) == 2
     )  # repeated address shoudn't be added to the list
-    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"]) == deposit_asset_to_whitelist
+    assert (
+        strategy_manager.getWhitelistedDepositAsset(configs["whitelisted_deposit_assets"][4][0])
+        == deposit_asset_to_whitelist
+    )
 
 
 def test_deactivate_whitelisted_address_by_owner(configs):
@@ -56,8 +59,9 @@ def test_deactivate_whitelisted_address_by_owner(configs):
     # Arrange
     strategy_manager = StrategyManager[-1]
     # Act
-    strategy_manager.deactivateWhitelistedDepositAsset(configs["dex_main_token_address"], {"from": dev_wallet})
-    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"])[3] == False
+    whitelisted_deposit_asset_address = configs["whitelisted_deposit_assets"][4][0]
+    strategy_manager.deactivateWhitelistedDepositAsset(whitelisted_deposit_asset_address, {"from": dev_wallet})
+    assert strategy_manager.getWhitelistedDepositAsset(whitelisted_deposit_asset_address)[3] == False
 
 
 def test_strategy_manager_default_parameters():
@@ -155,7 +159,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
         native_token_price_decimals,
     ) = price_feeds_data_consumer.getNativeTokenDataFeedLatestPriceAndDecimals()
     deposit_token_price, deposit_token_price_decimals = price_feeds_data_consumer.getDataFeedLatestPriceAndDecimals(
-        configs["whitelisted-deposit-assets"][0][2]
+        configs["whitelisted_deposit_assets"][0][2]
     )
     buy_percentages_sum = sum(configs["buy_percentages"])
     max_number_of_strategy_actions = int(PERCENTAGE_FACTOR / buy_percentages_sum)
@@ -163,7 +167,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     gas_cost_safety_factor = strategy_manager.getGasCostSafetyFactor(
         max_number_of_strategy_actions, configs["buy_frequency"]
     )
-    whitelisted_deposit_asset = configs["whitelisted-deposit-assets"][0]  # USDC.e
+    whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
     deposit_token_price_safety_factor = strategy_manager.getDepositTokenPriceSafetyFactor(
         whitelisted_deposit_asset[1], max_number_of_strategy_actions, configs["buy_frequency"]
     )
@@ -208,7 +212,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][1]
     # Act/ Assert
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
@@ -218,9 +222,10 @@ def test_deactivate_whitelisted_address_by_non_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
+    deposit_asset_to_deactivate = configs["whitelisted_deposit_assets"][4][0]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
-        strategy_manager.deactivateWhitelistedDepositAsset(configs["deposit_token_address"], {"from": dev_wallet2})
+        strategy_manager.deactivateWhitelistedDepositAsset(deposit_asset_to_deactivate, {"from": dev_wallet2})
 
 
 def test_change_max_expected_gas_units_by_non_owner(configs):

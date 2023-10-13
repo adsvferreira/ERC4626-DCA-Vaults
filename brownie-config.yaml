@@ -49,7 +49,8 @@ networks:
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
       ]
-    whitelisted-deposit-assets: [
+    whitelisted_deposit_assets: [
+        ############ STABLE ############
         # USDC.e:
         [
           "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
@@ -57,6 +58,28 @@ networks:
           "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
           True, # is_active
         ],
+        # USDC:
+        [
+          "0xaf88d065e77c8cc2239327c5edb3a432268e5831", # asset_address
+          0, # asset_type: STABLE
+          "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
+          True, # is_active
+        ],
+        # USDT:
+        [
+          "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", # asset_address
+          0, # asset_type: STABLE
+          "0x3f3f5df88dc9f13eac63df89ec16ef6e7e25dde7", # oracle_address
+          True, # is_active
+        ],
+        # DAI:
+        [
+          "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1", # asset_address
+          0, # asset_type: STABLE
+          "0xc5c8e77b397e531b8ec06bfb0048328b30e9ecfb", # oracle_address
+          True, # is_active
+        ],
+        ############ ETH_BTC ############
         # WETH:
         [
           "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", # asset_address
@@ -64,8 +87,79 @@ networks:
           "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", # oracle_address
           True, # is_active
         ],
+        # WBTC:
+        [
+          "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f", # asset_address
+          1, # asset_type: ETH_BTC
+          "0xd0c7101eacbb49f3decccc166d238410d6d46d57", # oracle_address
+          True, # is_active
+        ],
+        ############ BLUE_CHIP ############
+        # LINK:
+        [
+          "0xf97f4df75117a78c1a5a0dbb814af92458539fb4", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x86e53cf1b870786351da77a57575e79cb55812cb", # oracle_address
+          True, # is_active
+        ],
+        # UNI:
+        [
+          "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x9c917083fdb403ab5adbec26ee294f6ecada2720", # oracle_address
+          True, # is_active
+        ],
+        # SUSHI:
+        [
+          "0xd4d42f0b6def4ce0383636770ef773390d85c61a", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xb2a8ba74cbca38508ba1632761b56c897060147c", # oracle_address
+          True, # is_active
+        ],
+        # COMP:
+        [
+          "0x354a6da3fcde098f8389cad84b0182725c6c91de", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xe7c53ffd03eb6cef7d208bc4c13446c76d1e5884", # oracle_address
+          True, # is_active
+        ],
+        # CRV:
+        [
+          "0x11cdb42b0eb46d95f990bedd4695a6e3fa034978", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xaebda2c976cfd1ee1977eac079b4382acb849325", # oracle_address
+          True, # is_active
+        ],
+        # FXS:
+        [
+          "0x9d2f299715d94d8a7e6f5eaa8e654e8c74a988a7", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x36a121448d74fa81450c992a1a44b9b7377cd3a5", # oracle_address
+          True, # is_active
+        ],
+        # GMX:
+        [
+          "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xdb98056fecfff59d032ab628337a4887110df3db", # oracle_address
+          True, # is_active
+        ],
+        # ARB:
+        [
+          "0x912ce59144191c1204e64559fe8253a0e49e6548", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xb2a824043730fe05f3da2efafa1cbbe83fa548d6", # oracle_address
+          True, # is_active
+        ],
+        # LDO:
+        [
+          "0x13ad51ed4f1b7e9dc168d8a00cb3f4ddd85efa60", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xa43a34030088e6510feccfb77e88ee5e7ed0fe64", # oracle_address
+          True, # is_active
+        ],
       ]
-    not-whitelisted-token-address-example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
+    not_whitelisted_token_address_example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
   arbitrum-main:
     verify: True
     dex_router_address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # ARBITRUM Sushi
@@ -97,23 +191,117 @@ networks:
         "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
         "0x3d9907f9a368ad0a51be60f7da3b97cf940982d8",
       ]
-    whitelisted-deposit-assets: [
+    whitelisted_deposit_assets: [
+        ############ STABLE ############
+        # USDC.e:
         [
-          # USDC.e:
           "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
           0, # asset_type: STABLE
           "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
           True, # is_active
         ],
+        # USDC:
         [
-          # WETH:
+          "0xaf88d065e77c8cc2239327c5edb3a432268e5831", # asset_address
+          0, # asset_type: STABLE
+          "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", # oracle_address
+          True, # is_active
+        ],
+        # USDT:
+        [
+          "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", # asset_address
+          0, # asset_type: STABLE
+          "0x3f3f5df88dc9f13eac63df89ec16ef6e7e25dde7", # oracle_address
+          True, # is_active
+        ],
+        # DAI:
+        [
+          "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1", # asset_address
+          0, # asset_type: STABLE
+          "0xc5c8e77b397e531b8ec06bfb0048328b30e9ecfb", # oracle_address
+          True, # is_active
+        ],
+        ############ ETH_BTC ############
+        # WETH:
+        [
           "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", # asset_address
           1, # asset_type: ETH_BTC
           "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", # oracle_address
           True, # is_active
         ],
+        # WBTC:
+        [
+          "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f", # asset_address
+          1, # asset_type: ETH_BTC
+          "0xd0c7101eacbb49f3decccc166d238410d6d46d57", # oracle_address
+          True, # is_active
+        ],
+        ############ BLUE_CHIP ############
+        # LINK:
+        [
+          "0xf97f4df75117a78c1a5a0dbb814af92458539fb4", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x86e53cf1b870786351da77a57575e79cb55812cb", # oracle_address
+          True, # is_active
+        ],
+        # UNI:
+        [
+          "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x9c917083fdb403ab5adbec26ee294f6ecada2720", # oracle_address
+          True, # is_active
+        ],
+        # SUSHI:
+        [
+          "0xd4d42f0b6def4ce0383636770ef773390d85c61a", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xb2a8ba74cbca38508ba1632761b56c897060147c", # oracle_address
+          True, # is_active
+        ],
+        # COMP:
+        [
+          "0x354a6da3fcde098f8389cad84b0182725c6c91de", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xe7c53ffd03eb6cef7d208bc4c13446c76d1e5884", # oracle_address
+          True, # is_active
+        ],
+        # CRV:
+        [
+          "0x11cdb42b0eb46d95f990bedd4695a6e3fa034978", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xaebda2c976cfd1ee1977eac079b4382acb849325", # oracle_address
+          True, # is_active
+        ],
+        # FXS:
+        [
+          "0x9d2f299715d94d8a7e6f5eaa8e654e8c74a988a7", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0x36a121448d74fa81450c992a1a44b9b7377cd3a5", # oracle_address
+          True, # is_active
+        ],
+        # GMX:
+        [
+          "0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xdb98056fecfff59d032ab628337a4887110df3db", # oracle_address
+          True, # is_active
+        ],
+        # ARB:
+        [
+          "0x912ce59144191c1204e64559fe8253a0e49e6548", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xb2a824043730fe05f3da2efafa1cbbe83fa548d6", # oracle_address
+          True, # is_active
+        ],
+        # LDO:
+        [
+          "0x13ad51ed4f1b7e9dc168d8a00cb3f4ddd85efa60", # asset_address
+          2, # asset_type: BLUE_CHIP
+          "0xa43a34030088e6510feccfb77e88ee5e7ed0fe64", # oracle_address
+          True, # is_active
+        ],
       ]
-    not-whitelisted-token-address-example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
+    not_whitelisted_token_address_example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
 strategy-params:
   buy_percentages: [500, 500] #5% 5%
   buy_frequency: 0 # Daily
