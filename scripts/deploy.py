@@ -84,7 +84,7 @@ def main():
 
     print(CONSOLE_SEPARATOR)
     print("WHITELISTING DEPOSIT ASSETS:")
-    whitelist_deposit_assets(dev_wallet)
+    whitelist_deposit_assets(strategy_manager, dev_wallet)
 
 
 def deploy_treasury_vault(wallet_address: str, verify_flag: bool) -> Contract:
@@ -163,7 +163,6 @@ def deploy_resolver(
     return Resolver[-1]
 
 
-def whitelist_deposit_assets(wallet_address: str):
-    strategy_manager = StrategyManager[-1]
+def whitelist_deposit_assets(strategy_manager: Contract, wallet_address: str):
     assets_to_whitelist = config["networks"][network.show_active()]["whitelisted_deposit_assets"]
     strategy_manager.addWhitelistedDepositAssets(assets_to_whitelist, {"from": wallet_address})
