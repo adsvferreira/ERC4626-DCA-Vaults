@@ -3,6 +3,7 @@ import pytest
 import requests
 from math import floor
 from helpers import (
+    get_strategy_vault,
     get_account_from_pk,
     check_network_is_mainnet_fork,
 )
@@ -153,6 +154,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
     price_feeds_data_consumer = PriceFeedsDataConsumer[-1]
     (
         native_token_price,
@@ -161,8 +163,9 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     deposit_token_price, deposit_token_price_decimals = price_feeds_data_consumer.getDataFeedLatestPriceAndDecimals(
         configs["whitelisted_deposit_assets"][0][2]
     )
-    buy_percentages_sum = sum(configs["buy_percentages"])
-    max_number_of_strategy_actions = int(PERCENTAGE_FACTOR / buy_percentages_sum)
+
+    depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    max_number_of_strategy_actions = 12
     max_expected_gas_units = strategy_manager.getMaxExpectedGasUnits()
     gas_cost_safety_factor = strategy_manager.getGasCostSafetyFactor(
         max_number_of_strategy_actions, configs["buy_frequency"]
@@ -191,15 +194,17 @@ def test_simulate_min_deposit_value(configs, deposit_token):
                 * (10 ** (18 + native_token_price_decimals))
             )
         )
+        - depositor_previous_balance
     )
     # Assert
     assert (
         strategy_manager.simulateMinDepositValue(
             whitelisted_deposit_asset,
-            configs["buy_percentages"],
+            max_number_of_strategy_actions,
             configs["buy_frequency"],
             configs["treasury_percentage_fee_on_balance_update"],
             deposit_token_decimals,
+            depositor_previous_balance,
         )
         == expected_min_deposit_value
     )

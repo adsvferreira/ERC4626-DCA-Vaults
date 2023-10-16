@@ -244,9 +244,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             revert Errors.InvalidParameters("Buy percentages sum is gt 100");
         }
         if (
-            StrategyUtils.calculateStrategyMaxNumberOfActions(
-                buyPercentagesSum
-            ) >
+            _calculateStrategyMaxNumberOfActions(buyPercentagesSum) >
             strategyManager.getMaxNumberOfActionsPerFrequency(
                 strategyParams.buyFrequency
             )
@@ -314,10 +312,14 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         _userVaults[creator].push(newVault);
     }
 
-    function _getStrategyTimeLimitsInDays(
-        uint256 maxNumberOfStrategyActions
-    )
-        private
-        returns (Enums.StrategyTimeLimitsInDays strategyTimeLimitsInDays)
-    {}
+    /**
+     * @dev Note: division by zero needs to be previously checked
+     */
+    function _calculateStrategyMaxNumberOfActions(
+        uint256 sumOfBuyPercentages
+    ) internal pure returns (uint256 maxNumberOfActions) {
+        maxNumberOfActions =
+            PercentageMath.PERCENTAGE_FACTOR /
+            sumOfBuyPercentages;
+    }
 }

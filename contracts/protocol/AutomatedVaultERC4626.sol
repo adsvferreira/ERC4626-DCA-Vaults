@@ -94,12 +94,39 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         ConfigTypes.WhitelistedDepositAsset
             memory whitelistedDepositAsset = _strategyManager
                 .getWhitelistedDepositAsset(asset());
+        uint256 depositorTotalPeriodicBuyAmount;
+        if (balanceOf(receiver) == 0) {
+            uint256 _buyAssetsLength = buyAssetsLength;
+            for (uint256 i; i < _buyAssetsLength; ) {
+                depositorTotalPeriodicBuyAmount += assets.percentMul(
+                    strategyParams.buyPercentages[i]
+                );
+                unchecked {
+                    ++i;
+                }
+            }
+        } else {
+            depositorTotalPeriodicBuyAmount = this
+                .getDepositorTotalPeriodicBuyAmount(receiver);
+        }
+        if (depositorTotalPeriodicBuyAmount == 0) {
+            revert Errors.InvalidParameters(
+                "Deposit amount lower that the minimum allowed"
+            );
+        }
+        uint256 maxNumberOfStrategyActions = _calculateStrategyMaxNumberOfActionsBalanceBased(
+                depositorTotalPeriodicBuyAmount,
+                balanceOf(receiver),
+                assets
+            );
+        /** maxNumberOfStrategyActions vs max allowed value is checked inside simulateMinDepositValue */
         uint256 minDepositValue = _strategyManager.simulateMinDepositValue(
             whitelistedDepositAsset,
-            strategyParams.buyPercentages,
+            maxNumberOfStrategyActions,
             strategyParams.buyFrequency,
             initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
-            uint256(decimals())
+            uint256(decimals()),
+            this.balanceOf(receiver)
         );
         if (assets < minDepositValue) {
             revert Errors.InvalidParameters(
@@ -363,5 +390,18 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
                 ++i;
             }
         }
+    }
+
+    /**
+     * @dev Note: division by zero needs to be previously checked
+     */
+    function _calculateStrategyMaxNumberOfActionsBalanceBased(
+        uint256 depositorTotalPeriodicBuyAmount,
+        uint256 depositorCurrentBalance,
+        uint256 depositBalance
+    ) internal pure returns (uint256 maxNumberOfActions) {
+        maxNumberOfActions =
+            (depositorCurrentBalance + depositBalance) /
+            depositorTotalPeriodicBuyAmount;
     }
 }

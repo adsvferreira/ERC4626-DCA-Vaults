@@ -15,7 +15,6 @@ import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
-import {StrategyUtils} from "../libraries/helpers/StrategyUtils.sol";
 import {IPriceFeedsDataConsumer} from "../interfaces/IPriceFeedsDataConsumer.sol";
 
 contract StrategyManager is IStrategyManager, Ownable {
@@ -140,10 +139,12 @@ contract StrategyManager is IStrategyManager, Ownable {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
         uint256 maxNumberOfDays = buyFrequencyInDays *
             maxNumberOfStrategyActions;
-        uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
-            buyFrequency
-        ] * buyFrequencyInDays;
-        if (maxNumberOfDays > maxNumberOfDaysAllowed) {
+        bool ismaxNumberOfStrategyActionsValidBool = this
+            .ismaxNumberOfStrategyActionsValid(
+                maxNumberOfStrategyActions,
+                buyFrequency
+            );
+        if (!ismaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
@@ -174,16 +175,18 @@ contract StrategyManager is IStrategyManager, Ownable {
         Enums.BuyFrequency buyFrequency
     ) external view returns (uint256) {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
-        uint256 maxNumberOfDays = buyFrequencyInDays *
-            maxNumberOfStrategyActions;
-        uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
-            buyFrequency
-        ] * buyFrequencyInDays;
-        if (maxNumberOfDays > maxNumberOfDaysAllowed) {
+        bool ismaxNumberOfStrategyActionsValidBool = this
+            .ismaxNumberOfStrategyActionsValid(
+                maxNumberOfStrategyActions,
+                buyFrequency
+            );
+        if (!ismaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
         }
+        uint256 maxNumberOfDays = buyFrequencyInDays *
+            maxNumberOfStrategyActions;
         if (maxNumberOfDays <= 30) {
             return
                 _depositTokenPriceSafetyFactors[assetType][
@@ -212,14 +215,12 @@ contract StrategyManager is IStrategyManager, Ownable {
 
     function simulateMinDepositValue(
         ConfigTypes.WhitelistedDepositAsset calldata whitelistedDepositAsset,
-        uint256[] memory buyPercentages,
+        uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency,
         uint256 treasuryPercentageFeeOnBalanceUpdate,
-        uint256 depositAssetDecimals
+        uint256 depositAssetDecimals,
+        uint256 previousBalance
     ) external view returns (uint256 minDepositValue) {
-        uint256 buyPercentagesSum = StrategyUtils.buyPercentagesSum(
-            buyPercentages
-        );
         (
             uint256 nativeTokenPrice,
             uint256 nativeTokenPriceDecimals
@@ -238,10 +239,8 @@ contract StrategyManager is IStrategyManager, Ownable {
         //     gasPriceWei := gasprice()
         // }
         //
-        uint256 maxNumberOfStrategyActions = StrategyUtils
-            .calculateStrategyMaxNumberOfActions(buyPercentagesSum);
         // prettier-ignore
-        minDepositValue = (
+        minDepositValue = ((
             nativeTokenPrice 
             * PercentageMath.PERCENTAGE_FACTOR 
             * this.getMaxExpectedGasUnits() 
@@ -254,7 +253,20 @@ contract StrategyManager is IStrategyManager, Ownable {
             * treasuryPercentageFeeOnBalanceUpdate 
             * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
             * (10 ** (18 + nativeTokenPriceDecimals))
-        );
+        )) - previousBalance;
+    }
+
+    function ismaxNumberOfStrategyActionsValid(
+        uint256 maxNumberOfStrategyActions,
+        Enums.BuyFrequency buyFrequency
+    ) external view returns (bool) {
+        uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
+        uint256 maxNumberOfDays = buyFrequencyInDays *
+            maxNumberOfStrategyActions;
+        uint256 maxNumberOfDaysAllowed = _maxNumberOfActionsPerFrequency[
+            buyFrequency
+        ] * buyFrequencyInDays;
+        return maxNumberOfDays <= maxNumberOfDaysAllowed;
     }
 
     function _fillNumberOfDaysPerBuyFrequency() private {
