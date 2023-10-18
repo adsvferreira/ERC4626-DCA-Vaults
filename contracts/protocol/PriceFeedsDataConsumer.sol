@@ -9,9 +9,10 @@ pragma solidity 0.8.21;
  */
 
 import {Errors} from "../libraries/types/Errors.sol";
+import {IPriceFeedsDataConsumer} from "../interfaces/IPriceFeedsDataConsumer.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract PriceFeedsDataConsumer {
+contract PriceFeedsDataConsumer is IPriceFeedsDataConsumer {
     AggregatorV3Interface public nativeTokenDataFeed;
 
     constructor(address _nativeTokenOracleAddress) {
