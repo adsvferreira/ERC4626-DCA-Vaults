@@ -3,13 +3,12 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Automated ERC-4626 Vault Factory.
- * @author  André Ferreira
+ * @author  Pulsar Finance
  * @notice  See the following for the full EIP-4626 specification https://eips.ethereum.org/EIPS/eip-4626.
  * @notice  See the following for the full EIP-4626 openzeppelin implementation https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC4626.sol.
-
-  * @dev    VERSION: 1.0
+ * @dev    VERSION: 1.0
  *          DATE:    2023.08.13
-*/
+ */
 
 import {Roles} from "../libraries/roles/Roles.sol";
 import {Enums} from "../libraries/types/Enums.sol";
@@ -94,12 +93,39 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         ConfigTypes.WhitelistedDepositAsset
             memory whitelistedDepositAsset = _strategyManager
                 .getWhitelistedDepositAsset(asset());
+        uint256 depositorTotalPeriodicBuyAmount;
+        if (balanceOf(receiver) == 0) {
+            uint256 _buyAssetsLength = buyAssetsLength;
+            for (uint256 i; i < _buyAssetsLength; ) {
+                depositorTotalPeriodicBuyAmount += assets.percentMul(
+                    strategyParams.buyPercentages[i]
+                );
+                unchecked {
+                    ++i;
+                }
+            }
+        } else {
+            depositorTotalPeriodicBuyAmount = this
+                .getDepositorTotalPeriodicBuyAmount(receiver);
+        }
+        if (depositorTotalPeriodicBuyAmount == 0) {
+            revert Errors.InvalidParameters(
+                "Deposit amount lower that the minimum allowed"
+            );
+        }
+        uint256 maxNumberOfStrategyActions = _calculateStrategyMaxNumberOfActionsBalanceBased(
+                depositorTotalPeriodicBuyAmount,
+                balanceOf(receiver),
+                assets
+            );
+        /** @dev maxNumberOfStrategyActions vs max allowed value is checked inside simulateMinDepositValue */
         uint256 minDepositValue = _strategyManager.simulateMinDepositValue(
             whitelistedDepositAsset,
-            strategyParams.buyPercentages,
+            maxNumberOfStrategyActions,
             strategyParams.buyFrequency,
             initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
-            uint256(decimals())
+            uint256(decimals()),
+            balanceOf(receiver)
         );
         if (assets < minDepositValue) {
             revert Errors.InvalidParameters(
@@ -187,7 +213,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         if (startAfter >= depositorsLength) {
             revert Errors.InvalidParameters("Invalid interval");
         }
-        uint256 counter; // This is needed to copy from a storage array to a memory array.
+        uint256 counter; /** @dev This is required to copy from a storage array to a memory array.*/
         uint256 startLimit;
         uint256 outputLen;
         if (startAfter + limit <= depositorsLength) {
@@ -220,13 +246,13 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         IERC20[] memory buyAssets,
         uint256[] memory buyPercentages
     ) private pure {
-        // Check if max number of deposited assets was not exceeded
+        /** @notice Check if max number of deposited assets was not exceeded */
         if (buyAssets.length > uint256(MAX_NUMBER_OF_BUY_ASSETS)) {
             revert Errors.InvalidParameters(
                 "MAX_NUMBER_OF_BUY_ASSETS exceeded"
             );
         }
-        // Check if both arrays have the same length
+        /** @notice Check if both arrays have the same length */
         if (buyPercentages.length != buyAssets.length) {
             revert Errors.InvalidParameters(
                 "buyPercentages and buyAssets arrays must have the same length"
@@ -311,8 +337,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             }
             _mint(receiver, shares);
         } else {
-            // if deposit is not from vault creator, a fee will be removed
-            // from depositor and added to creator balance
+            /** @notice if deposit is not from vault creator, a fee will be removed
+            from depositor and added to creator balance */
             uint256 creatorPercentage = initMultiAssetsVaultParams
                 .creatorPercentageFeeOnDeposit;
             uint256 depositorPercentage = PercentageMath.PERCENTAGE_FACTOR -
@@ -344,7 +370,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             feesAccruedByCreator += creatorShares;
             _mint(creator, creatorShares);
         }
-        // Activates vault after 1st deposit
+        /** @notice Activates vault after 1st deposit */
         if (!initMultiAssetsVaultParams.isActive && shares > 0) {
             initMultiAssetsVaultParams.isActive = true;
         }
@@ -363,5 +389,18 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
                 ++i;
             }
         }
+    }
+
+    /**
+     * @dev division by zero needs to be previously checked
+     */
+    function _calculateStrategyMaxNumberOfActionsBalanceBased(
+        uint256 depositorTotalPeriodicBuyAmount,
+        uint256 depositorCurrentBalance,
+        uint256 depositBalance
+    ) internal pure returns (uint256 maxNumberOfActions) {
+        maxNumberOfActions =
+            (depositorCurrentBalance + depositBalance) /
+            depositorTotalPeriodicBuyAmount;
     }
 }

@@ -3,6 +3,7 @@ import pytest
 import requests
 from math import floor
 from helpers import (
+    get_strategy_vault,
     get_account_from_pk,
     check_network_is_mainnet_fork,
 )
@@ -14,10 +15,12 @@ from brownie import (
     exceptions,
 )
 
-PERCENTAGE_FACTOR = 10_000
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
+
+PERCENTAGE_FACTOR = 10_000
+DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 30_000
 
 
 ################################ Contract Actions ################################
@@ -27,13 +30,13 @@ def test_whitelist_new_address_by_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][4]
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
     assert strategy_manager.getWhitelistedDepositAssetAddresses() == [
-        configs["deposit_token_address"],
-        configs["dex_main_token_address"],
+        configs["whitelisted_deposit_assets"][0][0],
+        configs["whitelisted_deposit_assets"][4][0],
     ]
 
 
@@ -41,14 +44,17 @@ def test_repeated_address_by_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = (configs["dex_main_token_address"], 2, configs["native_token_data_feed_address"], True)
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][4]
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
     assert (
         len(strategy_manager.getWhitelistedDepositAssetAddresses()) == 2
     )  # repeated address shoudn't be added to the list
-    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"]) == deposit_asset_to_whitelist
+    assert (
+        strategy_manager.getWhitelistedDepositAsset(configs["whitelisted_deposit_assets"][4][0])
+        == deposit_asset_to_whitelist
+    )
 
 
 def test_deactivate_whitelisted_address_by_owner(configs):
@@ -56,8 +62,9 @@ def test_deactivate_whitelisted_address_by_owner(configs):
     # Arrange
     strategy_manager = StrategyManager[-1]
     # Act
-    strategy_manager.deactivateWhitelistedDepositAsset(configs["dex_main_token_address"], {"from": dev_wallet})
-    assert strategy_manager.getWhitelistedDepositAsset(configs["dex_main_token_address"])[3] == False
+    whitelisted_deposit_asset_address = configs["whitelisted_deposit_assets"][4][0]
+    strategy_manager.deactivateWhitelistedDepositAsset(whitelisted_deposit_asset_address, {"from": dev_wallet})
+    assert strategy_manager.getWhitelistedDepositAsset(whitelisted_deposit_asset_address)[3] == False
 
 
 def test_strategy_manager_default_parameters():
@@ -149,21 +156,23 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
     price_feeds_data_consumer = PriceFeedsDataConsumer[-1]
     (
         native_token_price,
         native_token_price_decimals,
     ) = price_feeds_data_consumer.getNativeTokenDataFeedLatestPriceAndDecimals()
     deposit_token_price, deposit_token_price_decimals = price_feeds_data_consumer.getDataFeedLatestPriceAndDecimals(
-        configs["whitelisted-deposit-assets"][0][2]
+        configs["whitelisted_deposit_assets"][0][2]
     )
-    buy_percentages_sum = sum(configs["buy_percentages"])
-    max_number_of_strategy_actions = int(PERCENTAGE_FACTOR / buy_percentages_sum)
+
+    depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    max_number_of_strategy_actions = 12
     max_expected_gas_units = strategy_manager.getMaxExpectedGasUnits()
     gas_cost_safety_factor = strategy_manager.getGasCostSafetyFactor(
         max_number_of_strategy_actions, configs["buy_frequency"]
     )
-    whitelisted_deposit_asset = configs["whitelisted-deposit-assets"][0]  # USDC.e
+    whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
     deposit_token_price_safety_factor = strategy_manager.getDepositTokenPriceSafetyFactor(
         whitelisted_deposit_asset[1], max_number_of_strategy_actions, configs["buy_frequency"]
     )
@@ -187,18 +196,57 @@ def test_simulate_min_deposit_value(configs, deposit_token):
                 * (10 ** (18 + native_token_price_decimals))
             )
         )
+        - depositor_previous_balance
     )
     # Assert
     assert (
         strategy_manager.simulateMinDepositValue(
             whitelisted_deposit_asset,
-            configs["buy_percentages"],
+            max_number_of_strategy_actions,
             configs["buy_frequency"],
             configs["treasury_percentage_fee_on_balance_update"],
             deposit_token_decimals,
+            depositor_previous_balance,
         )
         == expected_min_deposit_value
     )
+
+
+def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
+    depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    max_number_of_strategy_actions = 12
+    whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
+    deposit_token_decimals = deposit_token.decimals()
+    min_deposit_balance_before = strategy_manager.simulateMinDepositValue(
+        whitelisted_deposit_asset,
+        max_number_of_strategy_actions,
+        configs["buy_frequency"],
+        configs["treasury_percentage_fee_on_balance_update"],
+        deposit_token_decimals,
+        depositor_previous_balance,
+    )
+    # Act
+    strategy_vault.deposit(DEV_WALLET_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
+    new_depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    min_deposit_balance_after = strategy_manager.simulateMinDepositValue(
+        whitelisted_deposit_asset,
+        max_number_of_strategy_actions,
+        configs["buy_frequency"],
+        configs["treasury_percentage_fee_on_balance_update"],
+        deposit_token_decimals,
+        new_depositor_previous_balance,
+    )
+    expected_min_deposit_balance_after = (
+        min_deposit_balance_before - DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
+        if min_deposit_balance_before > new_depositor_previous_balance
+        else 0
+    )
+    # Assert
+    assert min_deposit_balance_after == expected_min_deposit_balance_after
 
 
 ################################ Contract Validations ################################
@@ -208,7 +256,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
-    deposit_asset_to_whitelist = configs["whitelisted-deposit-assets"][1]
+    deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][1]
     # Act/ Assert
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
@@ -218,9 +266,10 @@ def test_deactivate_whitelisted_address_by_non_owner(configs):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
+    deposit_asset_to_deactivate = configs["whitelisted_deposit_assets"][4][0]
     # Act / Assert
     with pytest.raises(exceptions.VirtualMachineError):
-        strategy_manager.deactivateWhitelistedDepositAsset(configs["deposit_token_address"], {"from": dev_wallet2})
+        strategy_manager.deactivateWhitelistedDepositAsset(deposit_asset_to_deactivate, {"from": dev_wallet2})
 
 
 def test_change_max_expected_gas_units_by_non_owner(configs):
@@ -252,6 +301,19 @@ def test_set_deposit_token_price_safety_factor_by_non_owner():
         strategy_manager.setDepositTokenPriceSafetyFactor(
             2, 3, new_deposit_token_price_safety_factor, {"from": dev_wallet2}
         )  # > 180 DAYS/BLUE_CHIP
+
+
+def test_deposit_generating_to_many_actions(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
+    max_number_of_actions_per_frequency = strategy_manager.getMaxNumberOfActionsPerFrequency(configs["buy_frequency"])
+    depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
+    max_wallet_deposit_balance = max_number_of_actions_per_frequency * depositor_total_periodic_buy_amount
+    # Act/Assert - Deposit must fail because dev_wallet already had balance in this strategy
+    with pytest.raises(exceptions.VirtualMachineError):
+        strategy_vault.deposit(max_wallet_deposit_balance, dev_wallet.address, {"from": dev_wallet})
 
 
 ################################ Aux Functions ################################

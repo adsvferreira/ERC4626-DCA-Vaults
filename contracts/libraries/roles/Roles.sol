@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 /**
  * @title Roles library
- * @author André Ferreira
+ * @author Pulsar Finance
  * @notice Roles Definition for Access Control Flow
  **/
 

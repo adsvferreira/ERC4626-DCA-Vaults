@@ -54,9 +54,15 @@ interface IStrategyManager {
 
     function simulateMinDepositValue(
         ConfigTypes.WhitelistedDepositAsset calldata whitelistedDepositAsset,
-        uint256[] memory buyPercentages,
+        uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency,
         uint256 treasuryPercentageFeeOnBalanceUpdate,
-        uint256 depositAssetDecimals
+        uint256 depositAssetDecimals,
+        uint256 previousBalance
     ) external view returns (uint256 minDepositValue);
+
+    function ismaxNumberOfStrategyActionsValid(
+        uint256 maxNumberOfStrategyActions,
+        Enums.BuyFrequency buyFrequency
+    ) external view returns (bool);
 }
