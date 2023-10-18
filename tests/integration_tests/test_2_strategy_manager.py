@@ -15,10 +15,12 @@ from brownie import (
     exceptions,
 )
 
-PERCENTAGE_FACTOR = 10_000
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
+
+PERCENTAGE_FACTOR = 10_000
+DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 30_000
 
 
 ################################ Contract Actions ################################
@@ -210,6 +212,43 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     )
 
 
+def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
+    depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    max_number_of_strategy_actions = 12
+    whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
+    deposit_token_decimals = deposit_token.decimals()
+    min_deposit_balance_before = strategy_manager.simulateMinDepositValue(
+        whitelisted_deposit_asset,
+        max_number_of_strategy_actions,
+        configs["buy_frequency"],
+        configs["treasury_percentage_fee_on_balance_update"],
+        deposit_token_decimals,
+        depositor_previous_balance,
+    )
+    # Act
+    strategy_vault.deposit(DEV_WALLET_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
+    new_depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    min_deposit_balance_after = strategy_manager.simulateMinDepositValue(
+        whitelisted_deposit_asset,
+        max_number_of_strategy_actions,
+        configs["buy_frequency"],
+        configs["treasury_percentage_fee_on_balance_update"],
+        deposit_token_decimals,
+        new_depositor_previous_balance,
+    )
+    expected_min_deposit_balance_after = (
+        min_deposit_balance_before - DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
+        if min_deposit_balance_before > new_depositor_previous_balance
+        else 0
+    )
+    # Assert
+    assert min_deposit_balance_after == expected_min_deposit_balance_after
+
+
 ################################ Contract Validations ################################
 
 
@@ -262,6 +301,19 @@ def test_set_deposit_token_price_safety_factor_by_non_owner():
         strategy_manager.setDepositTokenPriceSafetyFactor(
             2, 3, new_deposit_token_price_safety_factor, {"from": dev_wallet2}
         )  # > 180 DAYS/BLUE_CHIP
+
+
+def test_deposit_generating_to_many_actions(configs):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_manager = StrategyManager[-1]
+    strategy_vault = get_strategy_vault(0)
+    max_number_of_actions_per_frequency = strategy_manager.getMaxNumberOfActionsPerFrequency(configs["buy_frequency"])
+    depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
+    max_wallet_deposit_balance = max_number_of_actions_per_frequency * depositor_total_periodic_buy_amount
+    # Act/Assert - Deposit must fail because dev_wallet already had balance in this strategy
+    with pytest.raises(exceptions.VirtualMachineError):
+        strategy_vault.deposit(max_wallet_deposit_balance, dev_wallet.address, {"from": dev_wallet})
 
 
 ################################ Aux Functions ################################

@@ -42,11 +42,9 @@ def test_resolver_checker_before_controller_first_action():
     automated_vaults_factory_address = AutomatedVaultsFactory[-1].address
     controller = Controller[-1]
     first_deployed_vault_address = AutomatedVaultERC4626[0].address
-    # First expected_decoded_payload is for the second depositor (dev_wallet2) because
-    # first depositor (dev_wallet) hasn't enough balance for the next swap at this point.
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, first_deployed_vault_address, dev_wallet2.address],
+        [strategy_worker_address, first_deployed_vault_address, dev_wallet.address],
     )
     # Act
     resolver = deploy_resolver(dev_wallet, verify_flag, automated_vaults_factory_address, strategy_worker_address)
@@ -66,11 +64,11 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     strategy_vault_address = strategy_vault.address
     treasury_vault_address = TreasuryVault[-1].address
     initial_vault_balance_of_deposit_asset = deposit_token.balanceOf(strategy_vault_address)
-    initial_depositor_vault_lp_balance = strategy_vault.balanceOf(dev_wallet2)
-    initial_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet2) for buy_token in buy_tokens]
+    initial_depositor_vault_lp_balance = strategy_vault.balanceOf(dev_wallet)
+    initial_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet) for buy_token in buy_tokens]
     initial_vault_lp_total_suppy = strategy_vault.totalSupply()
     initial_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
-    wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     total_wallet_buy_amount_in_deposit_asset = sum(wallet_buy_amounts)
     treasury_fee_on_balance_update_in_deposit_asset = sum(
         [
@@ -78,21 +76,21 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
             for wallet_buy_amount in wallet_buy_amounts
         ]
     )
-    initial_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet2)
+    initial_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet)
     min_buy_assets_amounts_out = __get_min_buy_assets_amounts_out(configs, dex_router, wallet_buy_amounts)
     # Act
     strategy_vault.approve(
-        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
+        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet}
     )
     tx = controller.triggerStrategyAction(
-        strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
+        strategy_worker_address, strategy_vault_address, dev_wallet, {"from": dev_wallet}
     )
     final_vault_balance_of_deposit_asset = deposit_token.balanceOf(strategy_vault_address)
-    final_depositor_vault_lp_balance = strategy_vault.balanceOf(dev_wallet2)
-    final_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet2) for buy_token in buy_tokens]
+    final_depositor_vault_lp_balance = strategy_vault.balanceOf(dev_wallet)
+    final_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet) for buy_token in buy_tokens]
     final_vault_lp_total_suppy = strategy_vault.totalSupply()
     final_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
-    final_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet2)
+    final_wallet_vault_last_updated_timestamp = strategy_vault.lastUpdateOf(dev_wallet)
     # Assert
     assert (
         initial_vault_balance_of_deposit_asset - final_vault_balance_of_deposit_asset
@@ -122,10 +120,10 @@ def test_resolver_checker_after_controller_first_action():
     # Arrange
     strategy_worker_address = StrategyWorker[-1].address
     controller = Controller[-1]
-    second_deployed_vault_address = AutomatedVaultERC4626[1].address
+    first_deployed_vault_address = get_strategy_vault()
     expected_decoded_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, second_deployed_vault_address, dev_wallet2.address],
+        [strategy_worker_address, first_deployed_vault_address, dev_wallet2.address],
     )
     resolver = Resolver[-1]
     # Act
@@ -151,16 +149,14 @@ def test_resolver_checker_after_controller_update_all_vaults(deposit_token):
         [strategy_worker_address, second_deployed_strategy_vault_address, dev_wallet.address],
     )
     # Act
-    # New deposit required because the previously deposited amount was withdrawn:
-    first_deployed_strategy_vault.deposit(DEV_WALLET_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
     first_deployed_strategy_vault.approve(
-        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet}
-    )
-    controller.triggerStrategyAction(
-        strategy_worker_address, first_deployed_strategy_vault_address, dev_wallet, {"from": dev_wallet}
+        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
     )
     second_deployed_strategy_vault.approve(
         strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet}
+    )
+    controller.triggerStrategyAction(
+        strategy_worker_address, first_deployed_strategy_vault_address, dev_wallet2, {"from": dev_wallet}
     )
     controller.triggerStrategyAction(
         strategy_worker_address, second_deployed_strategy_vault_address, dev_wallet, {"from": dev_wallet}

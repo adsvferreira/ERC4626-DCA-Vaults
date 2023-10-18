@@ -253,7 +253,10 @@ contract StrategyManager is IStrategyManager, Ownable {
             * treasuryPercentageFeeOnBalanceUpdate 
             * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
             * (10 ** (18 + nativeTokenPriceDecimals))
-        )) - previousBalance;
+        ));
+        minDepositValue = minDepositValue > previousBalance
+            ? minDepositValue - previousBalance
+            : 0;
     }
 
     function ismaxNumberOfStrategyActionsValid(
