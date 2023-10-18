@@ -3,11 +3,10 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Strategy Worker.
- * @author  André Ferreira
-
-  * @dev    VERSION: 1.0
+ * @author  Pulsar Finance
+ * @dev     VERSION: 1.0
  *          DATE:    2023.08.29
-*/
+ */
 
 import {Roles} from "../libraries/roles/Roles.sol";
 import {Events} from "../libraries/types/Events.sol";
@@ -89,8 +88,8 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
 
         strategyVault.withdraw(
             amountToWithdraw,
-            address(this), //receiver
-            depositorAddress //owner
+            address(this) /** @dev receiver */,
+            depositorAddress /** @dev owner */
         );
 
         address[2] memory spenders = [
@@ -221,10 +220,12 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
                     buyAmountAfterFee,
                     amountOutMin,
                     indirectPath,
-                    depositorAddress, // swapped tokens sent directly to vault depositor
-                    block.timestamp + 600 // 10 min max to execute
+                    depositorAddress /** @notice swapped tokens sent directly to vault depositor */,
+                    block.timestamp + 600 /** @notice 10 min max to execute */
                 );
-            amountOut = amountsOut[amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
+            amountOut = amountsOut[
+                amountsOut.length - 1
+            ]; /** @dev amounts out contains results from all the pools in the choosen route */
         } else {
             address[] memory directPath = _getDirectPath(
                 depositAsset,
@@ -245,10 +246,12 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
                     buyAmountAfterFee,
                     amountOutMin,
                     directPath,
-                    depositorAddress, // swapped tokens sent directly to vault depositor
-                    block.timestamp + 600 // 10 min max to execute
+                    depositorAddress /** @notice swapped tokens sent directly to vault depositor */,
+                    block.timestamp + 600 /** @notice 10 min max to execute */
                 );
-            amountOut = amountsOut[amountsOut.length - 1]; // amounts out contains results from all the pools in the choosen route
+            amountOut = amountsOut[
+                amountsOut.length - 1
+            ]; /** @dev amounts out contains results from all the pools in the choosen route */
         }
     }
 

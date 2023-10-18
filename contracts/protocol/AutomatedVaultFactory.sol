@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Automated ERC-4626 Vault.
- * @author  André Ferreira
- * @dev    VERSION: 1.0
+ * @author  Pulsar Finance
+ * @dev     VERSION: 1.0
  *          DATE:    2023.08.15
  */
 
@@ -22,9 +22,13 @@ import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol
 contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     address payable public treasury;
     address public dexMainToken;
-    uint256 public treasuryFixedFeeOnVaultCreation; // AMOUNT IN NATIVE TOKEN CONSIDERING ALL DECIMALS
-    uint256 public creatorPercentageFeeOnDeposit; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
-    uint256 public treasuryPercentageFeeOnBalanceUpdate; // ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%)
+
+    /** @notice Amount in native token including decimals */
+    uint256 public treasuryFixedFeeOnVaultCreation;
+
+    /** @notice ONE_TEN_THOUSANDTH_PERCENT units (1 = 0.01%) */
+    uint256 public creatorPercentageFeeOnDeposit;
+    uint256 public treasuryPercentageFeeOnBalanceUpdate;
 
     address[] public getVaultAddress;
     mapping(address => address[]) private _userVaults;
@@ -71,7 +75,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams
         );
 
-        // SEND CREATION FEE TO PROTOCOL TREASURY
+        /** @notice Send creation fee to protocol trasury */
         (bool success, ) = treasury.call{value: msg.value}("");
         if (!success) {
             revert Errors.EtherTransferFailed(
@@ -88,7 +92,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 initMultiAssetVaultFactoryParams
             );
 
-        // CREATE NEW STRATEGY VAULT
+        /** @notice Create new strategy vault */
         AutomatedVaultERC4626 newVault = new AutomatedVaultERC4626(
             initMultiAssetVaultParams,
             strategyParams
@@ -160,7 +164,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
         if (startAfter >= vaultAddressLength) {
             revert Errors.InvalidParameters("Invalid interval");
         }
-        uint256 counter; // This is needed to copy from a storage array to a memory array.
+        uint256 counter; /** @dev This is needed to copy from a storage array to a memory array. */
         uint256 startLimit;
         uint256 outputLen;
         if (startAfter + limit <= vaultAddressLength) {
@@ -308,12 +312,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 "Null Address is not a valid newVault address"
             );
         }
-        // 2 vaults can't the same address, tx would revert at vault instantiation
+        /** @dev 2 vaults can't the same address, tx would revert at vault instantiation */
         _userVaults[creator].push(newVault);
     }
 
     /**
-     * @dev Note: division by zero needs to be previously checked
+     * @dev Division by zero needs to be previously checked
      */
     function _calculateStrategyMaxNumberOfActions(
         uint256 sumOfBuyPercentages

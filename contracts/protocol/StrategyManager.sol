@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Deposit Assets Whitelister.
- * @author  André Ferreira
- * @dev    VERSION: 1.0
+ * @author  Pulsar Finance
+ * @dev     VERSION: 1.0
  *          DATE:    2023.10.04
  */
 
@@ -56,7 +56,7 @@ contract StrategyManager is IStrategyManager, Ownable {
             if (
                 _whitelistedDepositAssets[
                     depositAssetsToWhitelist[i].assetAddress
-                ].assetAddress == address(0) // Avoid duplicates
+                ].assetAddress == address(0) /** @dev Avoid duplicates */
             ) {
                 _whitelistedDepositAssetAddresses.push(
                     depositAssetsToWhitelist[i].assetAddress
@@ -116,7 +116,7 @@ contract StrategyManager is IStrategyManager, Ownable {
     }
 
     /**
-        @dev Assets returned can be deactivated. Check getWhitelistedDepositAsset(address)
+        @dev Assets returned can already be deactivated. Check getWhitelistedDepositAsset(address)
     */
     function getWhitelistedDepositAssetAddresses()
         external

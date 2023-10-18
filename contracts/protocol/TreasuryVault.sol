@@ -3,11 +3,10 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Strategy Vault.
- * @author  André Ferreira
-
-  * @dev    VERSION: 1.0
+ * @author  Pulsar Finance
+ * @dev     VERSION: 1.0
  *          DATE:    2023.08.29
-*/
+ */
 import {Errors} from "../libraries/types/Errors.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
