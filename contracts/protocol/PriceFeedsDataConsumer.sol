@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 /**
  * @title   Price Feeds Data Consumer
- * @author  André Ferreira
- * @dev    VERSION: 1.0
+ * @author  Pulsar Finance
+ * @dev     VERSION: 1.0
  *          DATE:    2023.10.05
  */
 

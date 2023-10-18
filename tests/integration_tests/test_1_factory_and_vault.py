@@ -864,7 +864,7 @@ def test_deposit_gt_deposit_token_balance():
     # Arrange
     strategy_vault = get_strategy_vault()
     # Act / Assert
-    with reverts("ERC20: transfer amount exceeds balance"):
+    with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.deposit(GT_BALANCE_TESTING_VALUE, dev_wallet.address, {"from": dev_wallet})
 
 

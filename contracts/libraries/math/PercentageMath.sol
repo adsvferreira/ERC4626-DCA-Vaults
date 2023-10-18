@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 /**
  * @title PercentageMath library
- * @author André Ferreira (Adapted from Bend)
+ * @author Pulsar Finance (Adapted from Bend DAO)
  * @notice Provides functions to perform percentage calculations
  * @dev Percentages are defined by default with 2 decimals of precision (100.00). The precision is indicated by PERCENTAGE_FACTOR
  * @dev Operations are rounded half up
