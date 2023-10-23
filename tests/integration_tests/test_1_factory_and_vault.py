@@ -1,13 +1,15 @@
 import pytest
+from eth_abi import abi
 from typing import Tuple
 
 # from eth_utils.abi import function_abi_to_4byte_selector, collapse_if_tuple
 from helpers import (
-    get_account_from_pk,
-    check_network_is_mainnet_fork,
-    get_strategy_vault,
-    perc_mul_contracts_simulate,
     NULL_ADDRESS,
+    get_strategy_vault,
+    get_account_from_pk,
+    encode_custom_error,
+    perc_mul_contracts_simulate,
+    check_network_is_mainnet_fork,
 )
 from scripts.deploy import (
     deploy_controller,
@@ -18,15 +20,15 @@ from scripts.deploy import (
     deploy_price_feeds_data_consumer,
 )
 from brownie import (
+    config,
+    network,
+    reverts,
+    exceptions,
     TreasuryVault,
     StrategyWorker,
     StrategyManager,
     AutomatedVaultERC4626,
     AutomatedVaultsFactory,
-    network,
-    config,
-    reverts,
-    exceptions,
 )
 
 # In order to run this tests a .env file must be created in the project's root containing 2 dev wallet private keys.
@@ -500,13 +502,14 @@ def test_instantiate_strategy_from_non_factory_address(configs):
     strategy_params, _ = __get_default_strategy_and_init_vault_params(configs)
     init_vault_params = __get_init_vault_params(configs, dev_wallet)
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "Forbidden", []) + abi.encode(["string"], ["Not factory"]).hex()):
         AutomatedVaultERC4626.deploy(
             init_vault_params,
             strategy_params,
             {"from": dev_wallet},
             publish_source=verify_flag,
         )
+        
 
 
 def test_create_strategy_with_insufficient_ether_balance(configs):
@@ -536,7 +539,7 @@ def test_create_strategy_with_insufficient_ether_sent_as_fee(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidTxEtherAmount", []) + abi.encode(["string"], ["Ether sent must cover vault creation fee"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -556,7 +559,7 @@ def test_create_strategy_with_null_deposit_asset_address(configs):
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = NULL_ADDRESS
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address cannot be zero address"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -577,7 +580,7 @@ def test_create_strategy_with_null_buy_asset_address(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = NULL_ADDRESS
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -598,7 +601,7 @@ def test_buy_asset_list_contains_deposit_asset(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = init_vault_from_factory_params[2]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Buy asset list contains deposit asset"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -619,7 +622,7 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = configs["token_not_paired_with_weth_address"]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -629,6 +632,8 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
 
 
 def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
+    print(configs)
+    print(dev_wallet.balance())
     check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
@@ -640,11 +645,11 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = configs["token_not_paired_with_weth_address"]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
-            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},  # Was failing with insuficient balance
         )
     init_vault_from_factory_params[2] = old_deposit_asset_address
 
