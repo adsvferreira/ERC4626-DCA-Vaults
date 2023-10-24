@@ -2,10 +2,13 @@ import pytest
 from typing import List
 from scripts.deploy import deploy_resolver
 from helpers import (
-    get_account_from_pk,
-    check_network_is_mainnet_fork,
+    RoundingMethod,
     get_strategy_vault,
+    get_account_from_pk,
+    convert_assets_to_shares,
+    convert_shares_to_assets,
     perc_mul_contracts_simulate,
+    check_network_is_mainnet_fork,
     NULL_ADDRESS,
 )
 from brownie import (
@@ -17,7 +20,6 @@ from brownie import (
     AutomatedVaultsFactory,
     web3,
     config,
-    reverts,
     network,
     Contract,
     exceptions,
@@ -26,7 +28,7 @@ from brownie import (
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
 
-DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT = 9_999_999_999_999_999_999
+DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT = 999_999_999_999_999_999_999_999_999_999
 DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 20_000
 
 CONTROLLER_CALLER_BYTES_ROLE = web3.keccak(text="CONTROLLER_CALLER")
@@ -67,6 +69,7 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
     initial_depositor_vault_lp_balance = strategy_vault.balanceOf(dev_wallet)
     initial_depositor_balances_of_buy_assets = [buy_token.balanceOf(dev_wallet) for buy_token in buy_tokens]
     initial_vault_lp_total_suppy = strategy_vault.totalSupply()
+    initial_vault_total_assets = strategy_vault.totalAssets()
     initial_treasury_vault_balance_of_deposit_asset = deposit_token.balanceOf(treasury_vault_address)
     wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
     total_wallet_buy_amount_in_deposit_asset = sum(wallet_buy_amounts)
@@ -96,13 +99,18 @@ def test_trigger_strategy_action_by_owner_address(configs, deposit_token, buy_to
         initial_vault_balance_of_deposit_asset - final_vault_balance_of_deposit_asset
         == total_wallet_buy_amount_in_deposit_asset
     )
-    assert (
-        initial_depositor_vault_lp_balance - final_depositor_vault_lp_balance
-        == total_wallet_buy_amount_in_deposit_asset
-    )  # Ratio 1:1 lp token/ underlying token
-    assert (
-        initial_vault_lp_total_suppy - final_vault_lp_total_suppy == total_wallet_buy_amount_in_deposit_asset
-    )  # Ratio 1:1 lp token/ underlying token
+    assert initial_depositor_vault_lp_balance - final_depositor_vault_lp_balance == convert_assets_to_shares(
+        total_wallet_buy_amount_in_deposit_asset,
+        initial_vault_lp_total_suppy,
+        initial_vault_total_assets,
+        RoundingMethod.CEIL,
+    )
+    assert initial_vault_lp_total_suppy - final_vault_lp_total_suppy == convert_assets_to_shares(
+        total_wallet_buy_amount_in_deposit_asset,
+        initial_vault_lp_total_suppy,
+        initial_vault_total_assets,
+        RoundingMethod.CEIL,
+    )
     assert (
         final_treasury_vault_balance_of_deposit_asset - initial_treasury_vault_balance_of_deposit_asset
         == treasury_fee_on_balance_update_in_deposit_asset
@@ -139,14 +147,16 @@ def test_resolver_checker_after_controller_update_all_vaults(deposit_token):
     # Arrange
     first_deployed_strategy_vault = get_strategy_vault()
     second_deployed_strategy_vault = get_strategy_vault(1)
+    third_deployed_strategy_vault = get_strategy_vault(2)
     first_deployed_strategy_vault_address = first_deployed_strategy_vault.address
     second_deployed_strategy_vault_address = second_deployed_strategy_vault.address
+    third_deployed_strategy_vault_address = third_deployed_strategy_vault.address
     strategy_worker_address = StrategyWorker[-1].address
     controller = Controller[-1]
     resolver = Resolver[-1]
     expected_decoded_last_payload = (
         "triggerStrategyAction(address,address,address)",
-        [strategy_worker_address, second_deployed_strategy_vault_address, dev_wallet.address],
+        [strategy_worker_address, third_deployed_strategy_vault_address, dev_wallet.address],
     )
     # Act
     first_deployed_strategy_vault.approve(
@@ -166,6 +176,12 @@ def test_resolver_checker_after_controller_update_all_vaults(deposit_token):
     )
     controller.triggerStrategyAction(
         strategy_worker_address, second_deployed_strategy_vault_address, dev_wallet2, {"from": dev_wallet}
+    )
+    third_deployed_strategy_vault.approve(
+        strategy_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet}
+    )
+    controller.triggerStrategyAction(
+        strategy_worker_address, third_deployed_strategy_vault_address, dev_wallet, {"from": dev_wallet}
     )
     can_exec, payload = resolver.checker()
     decoded_last_payload = controller.decode_input(payload)
@@ -196,12 +212,10 @@ def test_trigger_strategy_action_by_address_without_controller_role():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
 
 
 def test_add_controller_role_to_address():
@@ -214,13 +228,10 @@ def test_add_controller_role_to_address():
     # Act
     controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
-    except exceptions.VirtualMachineError as e:
-        # Transaction should fail because all created vaults were already updated in a previous test
-        assert "is missing role" not in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
@@ -234,12 +245,10 @@ def test_remove_controller_role_from_address():
     # Act
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
@@ -325,10 +334,8 @@ def test_add_controller_role_to_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == False
 
 
@@ -338,10 +345,8 @@ def test_remove_controller_role_from_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == True
 
 
@@ -350,10 +355,8 @@ def test_remove_controller_role_from_admin_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet, {"from": dev_wallet2})
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
 
@@ -362,10 +365,8 @@ def test_add_controller_role_to_null_address_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    try:
+    with pytest.raises(exceptions.VirtualMachineError):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS, {"from": dev_wallet2})
-    except exceptions.VirtualMachineError as e:
-        assert "is missing role" in str(e)
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS) == False
 
 

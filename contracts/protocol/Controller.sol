@@ -15,8 +15,8 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Controller is IController, AccessControl {
     constructor() {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(Roles.CONTROLLER_CALLER, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(Roles.CONTROLLER_CALLER, msg.sender);
     }
 
     function triggerStrategyAction(

@@ -10,7 +10,8 @@ interface IAutomatedVaultsFactory {
     function createVault(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             memory initMultiAssetVaultFactoryParams,
-        ConfigTypes.StrategyParams calldata strategyParams
+        ConfigTypes.StrategyParams calldata strategyParams,
+        uint256 depositBalance
     ) external payable returns (address newVaultAddress);
 
     function allPairsExistForBuyAssets(

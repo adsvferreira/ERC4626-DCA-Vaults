@@ -38,7 +38,7 @@ contract StrategyManager is IStrategyManager, Ownable {
 
     IPriceFeedsDataConsumer public priceFeedsDataConsumer;
 
-    constructor(address _priceFeedsDataConsumer) {
+    constructor(address _priceFeedsDataConsumer) Ownable(msg.sender) {
         _fillNumberOfDaysPerBuyFrequency();
         _fillMaxNumberOfActionsPerFrequencyDefaultMap();
         _fillGasCostSafetyFactorsDefaultMap();
