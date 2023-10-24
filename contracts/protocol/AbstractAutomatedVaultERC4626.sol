@@ -13,7 +13,6 @@ pragma solidity 0.8.21;
  * @dev _afterUnderlyingTransferHook must call `_mint`
  */
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC4626, IERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";

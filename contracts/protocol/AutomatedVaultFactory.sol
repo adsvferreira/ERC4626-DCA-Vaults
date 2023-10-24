@@ -8,14 +8,12 @@ pragma solidity 0.8.21;
  *          DATE:    2023.08.15
  */
 
-import {Enums} from "../libraries/types/Enums.sol";
 import {Errors} from "../libraries/types/Errors.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
 import {StrategyUtils} from "../libraries/helpers/StrategyUtils.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";

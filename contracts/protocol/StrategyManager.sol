@@ -9,7 +9,6 @@ pragma solidity 0.8.21;
  */
 
 import {Enums} from "../libraries/types/Enums.sol";
-import {Roles} from "../libraries/roles/Roles.sol";
 import {Errors} from "../libraries/types/Errors.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
