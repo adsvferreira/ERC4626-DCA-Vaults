@@ -19,12 +19,11 @@ import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AbstractAutomatedVaultERC4626} from "./AbstractAutomatedVaultERC4626.sol";
-import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract AutomatedVaultERC4626 is
     AbstractAutomatedVaultERC4626,

@@ -9,7 +9,6 @@ pragma solidity 0.8.21;
  */
 
 import {IController} from "../interfaces/IController.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AutomatedVaultERC4626} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
 
