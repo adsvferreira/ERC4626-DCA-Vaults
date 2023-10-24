@@ -20,7 +20,9 @@ dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
 
 PERCENTAGE_FACTOR = 10_000
+DEV_WALLET_LOW_DEPOSIT_TOKEN_AMOUNT = 100
 DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 30_000
+DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 29_900
 
 
 ################################ Contract Actions ################################
@@ -157,6 +159,8 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     # Arrange
     strategy_manager = StrategyManager[-1]
     strategy_vault = get_strategy_vault(0)
+    # Deposit in order to test simulateMinDepositValue with maxWithdraw(dev_wallet) > 0:
+    strategy_vault.deposit(DEV_WALLET_LOW_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
     price_feeds_data_consumer = PriceFeedsDataConsumer[-1]
     (
         native_token_price,
@@ -166,7 +170,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
         configs["whitelisted_deposit_assets"][0][2]
     )
 
-    depositor_previous_balance = strategy_vault.balanceOf(dev_wallet)
+    depositor_previous_balance = strategy_vault.maxWithdraw(dev_wallet)
     max_number_of_strategy_actions = 12
     max_expected_gas_units = strategy_manager.getMaxExpectedGasUnits()
     gas_cost_safety_factor = strategy_manager.getGasCostSafetyFactor(
@@ -196,7 +200,11 @@ def test_simulate_min_deposit_value(configs, deposit_token):
                 * (10 ** (18 + native_token_price_decimals))
             )
         )
-        - depositor_previous_balance
+    )
+    expected_min_deposit_value = (
+        expected_min_deposit_value - depositor_previous_balance
+        if expected_min_deposit_value > depositor_previous_balance
+        else 0
     )
     # Assert
     assert (

@@ -40,7 +40,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         dexRouter = _dexRouter;
         dexMainToken = _dexMainToken;
         controller = _controller;
-        _setupRole(Roles.CONTROLLER, _controller);
+        _grantRole(Roles.CONTROLLER, _controller);
     }
 
     function executeStrategyAction(
