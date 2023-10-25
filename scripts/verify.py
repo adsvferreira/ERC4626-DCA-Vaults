@@ -6,7 +6,9 @@ from brownie import (
     AutomatedVaultsFactory,
 )
 
-FACTORY_ADDRESS = "" # TODO: ADD DEPLOYED FACTORY ADDRESS
+from brownie import config, network
+
+FACTORY_ADDRESS = config["networks"][network.show_active()]["vaults_factory_address"]
 PATH_TO_DATA = str(Path("./scripts/data/script_data.json").resolve())
 
 
@@ -17,7 +19,11 @@ def verify_vaults():
         factory_contract = AutomatedVaultsFactory.at(FACTORY_ADDRESS)
         vault_length = factory_contract.allVaultsLength()
 
-        if vault_length == 0 or vault_length - last_verified_vault == 1:  # All vaults have been verified or no vault exists
+        if vault_length == 0:
+            print('No vaults have been deployed!')
+            return
+        if vault_length - last_verified_vault == 1:
+            print("All vaults have been verified.")
             return
         
         vaults_failed_to_verify = []
