@@ -11,10 +11,8 @@ pragma solidity 0.8.21;
 import {Roles} from "../libraries/roles/Roles.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {Errors} from "../libraries/types/Errors.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {ITreasuryVault} from "../interfaces/ITreasuryVault.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
@@ -40,7 +38,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         dexRouter = _dexRouter;
         dexMainToken = _dexMainToken;
         controller = _controller;
-        _setupRole(Roles.CONTROLLER, _controller);
+        _grantRole(Roles.CONTROLLER, _controller);
     }
 
     function executeStrategyAction(
