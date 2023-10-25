@@ -8,7 +8,6 @@ pragma solidity 0.8.21;
  *          DATE:    2023.08.15
  */
 
-import {Enums} from "../libraries/types/Enums.sol";
 import {Errors} from "../libraries/types/Errors.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
@@ -18,8 +17,11 @@ import {StrategyUtils} from "../libraries/helpers/StrategyUtils.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {AutomatedVaultERC4626, IERC20} from "./AutomatedVaultERC4626.sol";
 import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
+    using SafeERC20 for IERC20;
+
     address payable public treasury;
     address public dexMainToken;
 
@@ -62,7 +64,8 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function createVault(
         ConfigTypes.InitMultiAssetVaultFactoryParams
             calldata initMultiAssetVaultFactoryParams,
-        ConfigTypes.StrategyParams calldata strategyParams
+        ConfigTypes.StrategyParams calldata strategyParams,
+        uint256 depositBalance
     ) external payable returns (address newVaultAddress) {
         if (msg.value < treasuryFixedFeeOnVaultCreation) {
             revert Errors.InvalidTxEtherAmount(
@@ -75,7 +78,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams
         );
 
-        /** @notice Send creation fee to protocol trasury */
+        /** @notice Send creation fee to protocol treasury */
         (bool success, ) = treasury.call{value: msg.value}("");
         if (!success) {
             revert Errors.EtherTransferFailed(
@@ -92,17 +95,12 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
                 initMultiAssetVaultFactoryParams
             );
 
-        /** @notice Create new strategy vault */
         AutomatedVaultERC4626 newVault = new AutomatedVaultERC4626(
             initMultiAssetVaultParams,
             strategyParams
         );
         newVaultAddress = address(newVault);
-        getVaultAddress.push(newVaultAddress);
-        _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
-            newVaultAddress
-        );
-        _addUserVault(initMultiAssetVaultParams.creator, newVaultAddress);
+
         emit Events.VaultCreated(
             initMultiAssetVaultParams.creator,
             address(initMultiAssetVaultParams.depositAsset),
@@ -111,6 +109,25 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             strategyParams.buyPercentages,
             strategyParams.buyFrequency
         );
+
+        SafeERC20.safeTransferFrom(
+            IERC20(initMultiAssetVaultParams.depositAsset),
+            msg.sender,
+            address(this),
+            depositBalance
+        );
+        IERC20(initMultiAssetVaultParams.depositAsset).approve(
+            newVaultAddress,
+            depositBalance
+        );
+        newVault.deposit(depositBalance, initMultiAssetVaultParams.creator);
+
+        /** @dev 2 vaults can't the same address, tx would revert at vault instantiation */
+        getVaultAddress.push(newVaultAddress);
+        _vaultsPerStrategyWorker[strategyParams.strategyWorker].push(
+            newVaultAddress
+        );
+        _userVaults[initMultiAssetVaultParams.creator].push(newVaultAddress);
     }
 
     function allPairsExistForBuyAssets(
@@ -299,21 +316,6 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             }
         }
         return iERC20instances;
-    }
-
-    function _addUserVault(address creator, address newVault) private {
-        if (creator == address(0)) {
-            revert Errors.InvalidParameters(
-                "Null Address is not a valid creator address"
-            );
-        }
-        if (newVault == address(0)) {
-            revert Errors.InvalidParameters(
-                "Null Address is not a valid newVault address"
-            );
-        }
-        /** @dev 2 vaults can't the same address, tx would revert at vault instantiation */
-        _userVaults[creator].push(newVault);
     }
 
     /**

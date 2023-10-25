@@ -17,7 +17,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract TreasuryVault is ITreasuryVault, Ownable {
     using SafeERC20 for IERC20;
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         emit Events.TreasuryCreated(msg.sender, address(this));
     }
 

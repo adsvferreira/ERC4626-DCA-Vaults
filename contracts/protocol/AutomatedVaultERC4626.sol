@@ -15,17 +15,21 @@ import {Enums} from "../libraries/types/Enums.sol";
 import {Errors} from "../libraries/types/Errors.sol";
 import {Events} from "../libraries/types/Events.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
-import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
 import {IStrategyWorker} from "../interfaces/IStrategyWorker.sol";
+import {IAutomatedVault} from "../interfaces/IAutomatedVault.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
 import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {IAutomatedVaultsFactory} from "../interfaces/IAutomatedVaultsFactory.sol";
+import {AbstractAutomatedVaultERC4626} from "./AbstractAutomatedVaultERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
+contract AutomatedVaultERC4626 is
+    AbstractAutomatedVaultERC4626,
+    IAutomatedVault,
+    AccessControl
+{
     using SafeERC20 for IERC20;
     using PercentageMath for uint256;
 
@@ -62,8 +66,8 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         ConfigTypes.InitMultiAssetVaultParams memory _initMultiAssetVaultParams,
         ConfigTypes.StrategyParams memory _strategyParams
     )
-        ERC4626(_initMultiAssetVaultParams.depositAsset)
-        ERC20(
+        AbstractAutomatedVaultERC4626(
+            _initMultiAssetVaultParams.depositAsset,
             _initMultiAssetVaultParams.name,
             _initMultiAssetVaultParams.symbol
         )
@@ -75,7 +79,7 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             _initMultiAssetVaultParams.buyAssets,
             _strategyParams.buyPercentages
         );
-        _setupRole(Roles.STRATEGY_WORKER, _strategyParams.strategyWorker);
+        _grantRole(Roles.STRATEGY_WORKER, _strategyParams.strategyWorker);
         initMultiAssetsVaultParams = _initMultiAssetVaultParams;
         _populateBuyAssetsData(_initMultiAssetVaultParams);
         strategyParams = _strategyParams;
@@ -83,58 +87,6 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         _strategyManager = IStrategyManager(_strategyParams.strategyManager);
         initMultiAssetsVaultParams.isActive = false;
         _fillUpdateFrequenciesMap();
-    }
-
-    /** @dev See {IERC4626-deposit}. */
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override(ERC4626) returns (uint256) {
-        ConfigTypes.WhitelistedDepositAsset
-            memory whitelistedDepositAsset = _strategyManager
-                .getWhitelistedDepositAsset(asset());
-        uint256 depositorTotalPeriodicBuyAmount;
-        if (balanceOf(receiver) == 0) {
-            uint256 _buyAssetsLength = buyAssetsLength;
-            for (uint256 i; i < _buyAssetsLength; ) {
-                depositorTotalPeriodicBuyAmount += assets.percentMul(
-                    strategyParams.buyPercentages[i]
-                );
-                unchecked {
-                    ++i;
-                }
-            }
-        } else {
-            depositorTotalPeriodicBuyAmount = this
-                .getDepositorTotalPeriodicBuyAmount(receiver);
-        }
-        if (depositorTotalPeriodicBuyAmount == 0) {
-            revert Errors.InvalidParameters(
-                "Deposit amount lower that the minimum allowed"
-            );
-        }
-        uint256 maxNumberOfStrategyActions = _calculateStrategyMaxNumberOfActionsBalanceBased(
-                depositorTotalPeriodicBuyAmount,
-                balanceOf(receiver),
-                assets
-            );
-        /** @dev maxNumberOfStrategyActions vs max allowed value is checked inside simulateMinDepositValue */
-        uint256 minDepositValue = _strategyManager.simulateMinDepositValue(
-            whitelistedDepositAsset,
-            maxNumberOfStrategyActions,
-            strategyParams.buyFrequency,
-            initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
-            uint256(decimals()),
-            balanceOf(receiver)
-        );
-        if (assets < minDepositValue) {
-            revert Errors.InvalidParameters(
-                "Deposit amount lower that the minimum allowed"
-            );
-        }
-        uint256 shares = previewDeposit(assets);
-        _deposit(_msgSender(), receiver, assets, shares);
-        return shares;
     }
 
     function setLastUpdatePerDepositor(
@@ -234,6 +186,103 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
         return allDepositors;
     }
 
+    function _beforeUnderlyingTransferHook(
+        address receiver,
+        uint256 assets
+    ) internal override {
+        ConfigTypes.WhitelistedDepositAsset
+            memory whitelistedDepositAsset = _strategyManager
+                .getWhitelistedDepositAsset(asset());
+        uint256 depositorTotalPeriodicBuyAmount;
+        if (balanceOf(receiver) == 0) {
+            uint256 _buyAssetsLength = buyAssetsLength;
+            for (uint256 i; i < _buyAssetsLength; ) {
+                depositorTotalPeriodicBuyAmount += assets.percentMul(
+                    strategyParams.buyPercentages[i]
+                );
+                unchecked {
+                    ++i;
+                }
+            }
+        } else {
+            depositorTotalPeriodicBuyAmount = this
+                .getDepositorTotalPeriodicBuyAmount(receiver);
+        }
+        if (depositorTotalPeriodicBuyAmount == 0) {
+            revert Errors.InvalidParameters(
+                "Deposit amount lower that the minimum allowed"
+            );
+        }
+        uint256 maxNumberOfStrategyActions = _calculateStrategyMaxNumberOfActionsBalanceBased(
+                depositorTotalPeriodicBuyAmount,
+                maxWithdraw(receiver),
+                assets
+            );
+        /** @dev maxNumberOfStrategyActions vs max allowed value is checked inside simulateMinDepositValue */
+        uint256 minDepositValue = _strategyManager.simulateMinDepositValue(
+            whitelistedDepositAsset,
+            maxNumberOfStrategyActions,
+            strategyParams.buyFrequency,
+            initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
+            uint256(this.getUnderlyinDecimals()),
+            maxWithdraw(receiver)
+        );
+        if (assets < minDepositValue) {
+            revert Errors.InvalidParameters(
+                "Deposit amount lower that the minimum allowed"
+            );
+        }
+    }
+
+    function _afterUnderlyingTransferHook(
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        address creator = initMultiAssetsVaultParams.creator;
+        if (receiver == creator) {
+            if (balanceOf(receiver) == 0 && shares > 0) {
+                getDepositorAddress.push(receiver);
+                ++allDepositorsLength;
+                _initialDepositBalances[receiver] = assets;
+                _updateDepositorBuyAmounts(receiver);
+            }
+            _mint(receiver, shares);
+        } else {
+            /** @notice if deposit is not from vault creator, a fee will be removed
+            from depositor and added to creator balance */
+            uint256 creatorPercentage = initMultiAssetsVaultParams
+                .creatorPercentageFeeOnDeposit;
+            uint256 depositorPercentage = PercentageMath.PERCENTAGE_FACTOR -
+                creatorPercentage;
+            uint256 creatorShares = shares.percentMul(creatorPercentage);
+            uint256 depositorShares = shares.percentMul(depositorPercentage);
+            uint256 creatorAssets = assets.percentMul(creatorPercentage);
+            uint256 depositorAssets = assets.percentMul(depositorPercentage);
+
+            emit Events.CreatorFeeTransfered(
+                address(this),
+                creator,
+                receiver,
+                creatorShares
+            );
+
+            if (balanceOf(receiver) == 0 && depositorShares > 0) {
+                getDepositorAddress.push(receiver);
+                ++allDepositorsLength;
+                _initialDepositBalances[receiver] = depositorAssets;
+                _updateDepositorBuyAmounts(receiver);
+            }
+            _mint(receiver, depositorShares);
+            _mint(creator, creatorShares);
+            feesAccruedByCreator += creatorAssets;
+        }
+        /** @notice Activates vault after 1st deposit */
+        if (!initMultiAssetsVaultParams.isActive && shares > 0) {
+            initMultiAssetsVaultParams.isActive = true;
+        }
+    }
+
     function _fillUpdateFrequenciesMap() private {
         _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
@@ -272,107 +321,6 @@ contract AutomatedVaultERC4626 is ERC4626, AccessControl, IAutomatedVault {
             unchecked {
                 ++i;
             }
-        }
-    }
-
-    /**
-     * @dev Attempts to fetch the asset decimals. A return value of false indicates that the attempt failed in some way.
-     */
-    function _originalTryGetAssetDecimals(
-        IERC20 asset_
-    ) private view returns (bool, uint8) {
-        (bool success, bytes memory encodedDecimals) = address(asset_)
-            .staticcall(abi.encodeCall(IERC20Metadata.decimals, ()));
-        if (success && encodedDecimals.length >= 32) {
-            uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
-            if (returnedDecimals <= type(uint8).max) {
-                return (true, uint8(returnedDecimals));
-            }
-        }
-        return (false, 0);
-    }
-
-    /**
-     * @dev Deposit/mint common workflow.
-     */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
-        // **************************************** ERC4262 ****************************************
-        // If _asset is ERC777, `transferFrom` can trigger a reentrancy BEFORE the transfer happens through the
-        // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
-        // calls the vault, which is assumed not malicious.
-        //
-        // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
-        // assets are transferred and before the shares are minted, which is a valid state.
-        // slither-disable-next-line reentrancy-no-eth
-        // **************************************** CUSTOM ****************************************
-        // After underlying transfer and before vault lp mint _afterUnderlyingTransferHook was added
-        // where vault creator fee logic is implemented
-        address depositAsset = asset();
-        SafeERC20.safeTransferFrom(
-            IERC20(depositAsset),
-            caller,
-            address(this),
-            assets
-        );
-        _afterUnderlyingTransferHook(receiver, shares);
-        emit Deposit(caller, receiver, assets, shares);
-    }
-
-    function _afterUnderlyingTransferHook(
-        address receiver,
-        uint256 shares
-    ) internal {
-        address creator = initMultiAssetsVaultParams.creator;
-        if (receiver == creator) {
-            if (balanceOf(receiver) == 0 && shares > 0) {
-                getDepositorAddress.push(receiver);
-                ++allDepositorsLength;
-                _initialDepositBalances[receiver] = shares;
-                _updateDepositorBuyAmounts(receiver);
-            }
-            _mint(receiver, shares);
-        } else {
-            /** @notice if deposit is not from vault creator, a fee will be removed
-            from depositor and added to creator balance */
-            uint256 creatorPercentage = initMultiAssetsVaultParams
-                .creatorPercentageFeeOnDeposit;
-            uint256 depositorPercentage = PercentageMath.PERCENTAGE_FACTOR -
-                creatorPercentage;
-            uint256 creatorShares = shares.percentMul(creatorPercentage);
-            uint256 depositorShares = shares.percentMul(depositorPercentage);
-
-            emit Events.CreatorFeeTransfered(
-                address(this),
-                creator,
-                receiver,
-                creatorShares
-            );
-
-            if (balanceOf(receiver) == 0 && depositorShares > 0) {
-                getDepositorAddress.push(receiver);
-                ++allDepositorsLength;
-                _initialDepositBalances[receiver] = depositorShares;
-                _updateDepositorBuyAmounts(receiver);
-            }
-            _mint(receiver, depositorShares);
-
-            if (balanceOf(creator) == 0 && creatorShares > 0) {
-                getDepositorAddress.push(creator);
-                ++allDepositorsLength;
-                _initialDepositBalances[creator] = creatorShares;
-                _updateDepositorBuyAmounts(creator);
-            }
-            feesAccruedByCreator += creatorShares;
-            _mint(creator, creatorShares);
-        }
-        /** @notice Activates vault after 1st deposit */
-        if (!initMultiAssetsVaultParams.isActive && shares > 0) {
-            initMultiAssetsVaultParams.isActive = true;
         }
     }
 

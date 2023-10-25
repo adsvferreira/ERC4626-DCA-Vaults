@@ -9,7 +9,6 @@ pragma solidity 0.8.21;
  */
 
 import {Enums} from "../libraries/types/Enums.sol";
-import {Roles} from "../libraries/roles/Roles.sol";
 import {Errors} from "../libraries/types/Errors.sol";
 import {ConfigTypes} from "../libraries/types/ConfigTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -38,7 +37,7 @@ contract StrategyManager is IStrategyManager, Ownable {
 
     IPriceFeedsDataConsumer public priceFeedsDataConsumer;
 
-    constructor(address _priceFeedsDataConsumer) {
+    constructor(address _priceFeedsDataConsumer) Ownable(msg.sender) {
         _fillNumberOfDaysPerBuyFrequency();
         _fillMaxNumberOfActionsPerFrequencyDefaultMap();
         _fillGasCostSafetyFactorsDefaultMap();
