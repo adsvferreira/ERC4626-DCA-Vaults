@@ -632,10 +632,9 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
 
 
 def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
-    print(configs)
-    print(dev_wallet.balance())
     check_network_is_mainnet_fork()
     # Arrange
+    strategy_manager = StrategyManager[-1]
     vaults_factory = AutomatedVaultsFactory[-1]
     (
         strategy_params,
@@ -644,14 +643,16 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
     init_vault_from_factory_params = list(init_vault_from_factory_params)
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = configs["token_not_paired_with_weth_address"]
+    strategy_manager.addWhitelistedDepositAssets([(init_vault_from_factory_params[2], 0, "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", True )], {"from": dev_wallet})
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path between deposit asset and dex main token not found"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
-            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},  # Was failing with insuficient balance
-        )
+            {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+    )
     init_vault_from_factory_params[2] = old_deposit_asset_address
+    print(init_vault_from_factory_params[2])
 
 
 def test_create_strategy_with_different_length_for_buy_tokens_and_percentages(configs):
@@ -667,7 +668,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_percentages(co
     strategy_params[0] = [strategy_params[0][1]]
     # Act / Assert
     assert len(strategy_params[0]) != len(init_vault_from_factory_params[3])
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["buyPercentages and buyAssets arrays must have the same length"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -688,7 +689,7 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
     old_buy_token_addresses = init_vault_from_factory_params[3]
     init_vault_from_factory_params[3] = configs["too_many_buy_token_addresses"]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["MAX_NUMBER_OF_BUY_ASSETS exceeded"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,

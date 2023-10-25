@@ -34,6 +34,7 @@ def test_whitelist_new_address_by_owner(configs):
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
+    print(strategy_manager.getWhitelistedDepositAssetAddresses())
     assert strategy_manager.getWhitelistedDepositAssetAddresses() == [
         configs["whitelisted_deposit_assets"][0][0],
         configs["whitelisted_deposit_assets"][4][0],
