@@ -2,13 +2,16 @@ import pytest
 from eth_abi import abi
 from typing import Tuple
 
-# from eth_utils.abi import function_abi_to_4byte_selector, collapse_if_tuple
 from helpers import (
+    NULL_ADDRESS,
     RoundingMethod,
     get_strategy_vault,
+    get_account_from_pk,
+    encode_custom_error,
+    convert_assets_to_shares,
+    convert_shares_to_assets,
     perc_mul_contracts_simulate,
     check_network_is_mainnet_fork,
-    NULL_ADDRESS,
 )
 from scripts.deploy import (
     deploy_controller,
@@ -19,6 +22,7 @@ from scripts.deploy import (
     deploy_price_feeds_data_consumer,
 )
 from brownie import (
+    Wei,
     config,
     network,
     reverts,
@@ -28,10 +32,6 @@ from brownie import (
     StrategyManager,
     AutomatedVaultERC4626,
     AutomatedVaultsFactory,
-    Wei,
-    config,
-    network,
-    exceptions,
 )
 
 # In order to run this tests a .env file must be created in the project's root containing 2 dev wallet private keys.
