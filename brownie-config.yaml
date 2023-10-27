@@ -18,6 +18,13 @@ rpcs:
 networks:
   development:
     verify: False
+  goerli:
+    verify: False
+    dex_router_address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+    dex_factory_address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+    dex_main_token_address: "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
+    native_token_data_feed_address: "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e"
+    deposit_token_address: "0x07865c6e87b9f70255377e024ace6630c1eaa37f"
   arbitrum-main-fork:
     verify: False
     dex_router_address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # ARBITRUM Sushi
