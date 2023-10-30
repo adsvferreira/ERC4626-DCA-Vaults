@@ -300,6 +300,48 @@ def test_deposit_owned_vault(configs, deposit_token):
     assert final_depositor_total_periodic_buy_amount == initial_depositor_total_periodic_buy_amount
 
 
+def test_lp_token_transfer_to_future_depositor_before_deposit_not_owned_vault(configs, deposit_token):
+    check_network_is_mainnet_fork()
+    # Arrange
+    strategy_vault = get_strategy_vault()
+    initial_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
+    initial_wallet2_asset_balance = strategy_vault.maxWithdraw(dev_wallet2)
+    initial_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
+    initial_wallet_asset_balance = strategy_vault.maxWithdraw(dev_wallet)
+    initial_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    initial_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    initial_wallet2_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
+    initial_total_supply = strategy_vault.totalSupply()
+    initial_total_assets = strategy_vault.totalAssets()
+    shares_transfer_amount = 1
+    # Act
+    strategy_vault.transfer(dev_wallet2.address, shares_transfer_amount, {"from": dev_wallet})
+    final_wallet2_lp_balance = strategy_vault.balanceOf(dev_wallet2)
+    final_wallet2_asset_balance = strategy_vault.maxWithdraw(dev_wallet2)
+    final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
+    final_wallet_asset_balance = strategy_vault.maxWithdraw(dev_wallet)
+    final_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
+    final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
+    final_wallet2_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
+    final_total_supply = strategy_vault.totalSupply()
+    final_total_assets = strategy_vault.totalAssets()
+    # Assert
+    assert final_wallet2_lp_balance == initial_wallet2_lp_balance + shares_transfer_amount
+    assert final_wallet2_asset_balance == initial_wallet2_asset_balance + convert_shares_to_assets(
+        shares_transfer_amount, initial_total_supply, initial_total_assets
+    )
+    assert final_wallet_lp_balance == initial_wallet_lp_balance - shares_transfer_amount
+    assert final_wallet_asset_balance == initial_wallet_asset_balance - convert_shares_to_assets(
+        shares_transfer_amount, initial_total_supply, initial_total_assets
+    )
+    assert final_total_supply == initial_total_supply
+    assert final_total_assets == initial_total_assets
+    # The following vault properties should only be updated when interacting with `deposit` function
+    assert final_initial_wallet2_deposit_balance == initial_initial_wallet2_deposit_balance
+    assert final_wallet2_buy_amounts == initial_wallet2_buy_amounts
+    assert final_wallet2_total_periodic_buy_amount == initial_wallet2_total_periodic_buy_amount
+
+
 def test_deposit_not_owned_vault(configs, deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
@@ -310,9 +352,7 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     initial_total_assets = strategy_vault.totalAssets()
     initial_initial_wallet_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet)
     initial_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
-    initial_initial_wallet2_deposit_balance = strategy_vault.getInitialDepositBalance(dev_wallet2)
-    initial_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
-    initial_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
+    initial_fees_accrued_by_creator = strategy_vault.feesAccruedByCreator()
     creator_fee_on_deposit = perc_mul_contracts_simulate(
         DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, configs["creator_percentage_fee_on_deposit"]
     )
@@ -357,11 +397,7 @@ def test_deposit_not_owned_vault(configs, deposit_token):
     final_wallet2_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet2)
     final_depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet2)
     # Assert
-    assert strategy_vault.feesAccruedByCreator() == creator_fee_on_deposit
-    assert initial_wallet2_lp_balance == 0
-    assert initial_initial_wallet2_deposit_balance == 0
-    assert initial_wallet2_buy_amounts == []
-    assert initial_depositor_total_periodic_buy_amount == 0
+    assert strategy_vault.feesAccruedByCreator() == initial_fees_accrued_by_creator + creator_fee_on_deposit
     assert final_vault_lp_supply == expected_final_vault_lp_supply
     assert final_total_assets == expected_final_total_assets
     assert final_vault_depositors_list_length == 2
