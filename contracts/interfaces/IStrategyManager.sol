@@ -30,8 +30,6 @@ interface IStrategyManager {
         Enums.BuyFrequency buyFrequency
     ) external view returns (uint256);
 
-    function getMaxExpectedGasUnits() external view returns (uint256);
-
     function getWhitelistedDepositAssetAddresses()
         external
         view
@@ -41,17 +39,6 @@ interface IStrategyManager {
         address depositAssetAddress
     ) external view returns (ConfigTypes.WhitelistedDepositAsset memory);
 
-    function getGasCostSafetyFactor(
-        uint256 maxNumberOfStrategyActions,
-        Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256);
-
-    function getDepositTokenPriceSafetyFactor(
-        Enums.AssetTypes assetType,
-        uint256 maxNumberOfStrategyActions,
-        Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256);
-
     function simulateMinDepositValue(
         ConfigTypes.WhitelistedDepositAsset calldata whitelistedDepositAsset,
         uint256 maxNumberOfStrategyActions,
@@ -60,9 +47,4 @@ interface IStrategyManager {
         uint256 depositAssetDecimals,
         uint256 previousBalance
     ) external view returns (uint256 minDepositValue);
-
-    function ismaxNumberOfStrategyActionsValid(
-        uint256 maxNumberOfStrategyActions,
-        Enums.BuyFrequency buyFrequency
-    ) external view returns (bool);
 }

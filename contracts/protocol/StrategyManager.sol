@@ -110,7 +110,7 @@ contract StrategyManager is IStrategyManager, Ownable {
         return _maxNumberOfActionsPerFrequency[buyFrequency];
     }
 
-    function getMaxExpectedGasUnits() external view returns (uint256) {
+    function getMaxExpectedGasUnits() public view returns (uint256) {
         return _MAX_EXPECTED_GAS_UNITS_WEI;
     }
 
@@ -131,19 +131,27 @@ contract StrategyManager is IStrategyManager, Ownable {
         return _whitelistedDepositAssets[depositAssetAddress];
     }
 
+    /**
+        @dev The `getGasCostSafetyFactor` does not have a `fallback return` in case any of the if conditions 
+        are met because it implies that maxNumberOfDays > 365. 
+        In this case isMaxNumberOfStrategyActionsValid (previously checked) MUST return false.
+        Keep this in mind if you need to modify any of the following mapping parameters hardcoded in this contract:
+        - _numberOfDaysPerBuyFrequency
+        - _maxNumberOfActionsPerFrequency
+    */
     function getGasCostSafetyFactor(
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
         uint256 maxNumberOfDays = buyFrequencyInDays *
             maxNumberOfStrategyActions;
-        bool ismaxNumberOfStrategyActionsValidBool = this
-            .ismaxNumberOfStrategyActionsValid(
+        bool isMaxNumberOfStrategyActionsValidBool = this
+            .isMaxNumberOfStrategyActionsValid(
                 maxNumberOfStrategyActions,
                 buyFrequency
             );
-        if (!ismaxNumberOfStrategyActionsValidBool) {
+        if (!isMaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
@@ -168,18 +176,26 @@ contract StrategyManager is IStrategyManager, Ownable {
         }
     }
 
+    /**
+        @dev The `getDepositTokenPriceSafetyFactor` does not have a `fallback return` in case any of the if conditions 
+        are met because it implies that maxNumberOfDays > 365. 
+        In this case isMaxNumberOfStrategyActionsValid (previously checked) MUST return false.
+        Keep this in mind if you need to modify any of the following mapping parameters hardcoded in this contract:
+        - _numberOfDaysPerBuyFrequency
+        - _maxNumberOfActionsPerFrequency
+    */
     function getDepositTokenPriceSafetyFactor(
         Enums.AssetTypes assetType,
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
-        bool ismaxNumberOfStrategyActionsValidBool = this
-            .ismaxNumberOfStrategyActionsValid(
+        bool isMaxNumberOfStrategyActionsValidBool = this
+            .isMaxNumberOfStrategyActionsValid(
                 maxNumberOfStrategyActions,
                 buyFrequency
             );
-        if (!ismaxNumberOfStrategyActionsValidBool) {
+        if (!isMaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
@@ -242,15 +258,15 @@ contract StrategyManager is IStrategyManager, Ownable {
         minDepositValue = ((
             nativeTokenPrice 
             * PercentageMath.PERCENTAGE_FACTOR 
-            * this.getMaxExpectedGasUnits() 
+            * getMaxExpectedGasUnits() 
             * maxNumberOfStrategyActions 
             * gasPriceWei 
-            * this.getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) 
+            * getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) 
             * (10 ** (tokenPriceDecimals + depositAssetDecimals))
         ) / (
             tokenPrice 
             * treasuryPercentageFeeOnBalanceUpdate 
-            * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
+            * getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
             * (10 ** (18 + nativeTokenPriceDecimals))
         ));
         minDepositValue = minDepositValue > previousBalance
@@ -258,7 +274,7 @@ contract StrategyManager is IStrategyManager, Ownable {
             : 0;
     }
 
-    function ismaxNumberOfStrategyActionsValid(
+    function isMaxNumberOfStrategyActionsValid(
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
     ) external view returns (bool) {

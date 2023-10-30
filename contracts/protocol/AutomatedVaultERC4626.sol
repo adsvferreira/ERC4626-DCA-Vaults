@@ -189,12 +189,12 @@ contract AutomatedVaultERC4626 is
     function _beforeUnderlyingTransferHook(
         address receiver,
         uint256 assets
-    ) internal override {
+    ) internal view override {
         ConfigTypes.WhitelistedDepositAsset
             memory whitelistedDepositAsset = _strategyManager
                 .getWhitelistedDepositAsset(asset());
         uint256 depositorTotalPeriodicBuyAmount;
-        if (balanceOf(receiver) == 0) {
+        if (_depositorBuyAmounts[receiver].length == 0) {
             uint256 _buyAssetsLength = buyAssetsLength;
             for (uint256 i; i < _buyAssetsLength; ) {
                 depositorTotalPeriodicBuyAmount += assets.percentMul(
@@ -224,7 +224,7 @@ contract AutomatedVaultERC4626 is
             maxNumberOfStrategyActions,
             strategyParams.buyFrequency,
             initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
-            uint256(this.getUnderlyinDecimals()),
+            uint256(getUnderlyingDecimals()),
             maxWithdraw(receiver)
         );
         if (assets < minDepositValue) {
