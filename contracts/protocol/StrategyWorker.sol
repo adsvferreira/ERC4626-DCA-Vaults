@@ -144,6 +144,7 @@ contract StrategyWorker is IStrategyWorker, AccessControl {
         uint256 actionFeePercentage
     )
         private
+        pure
         returns (
             uint256 amountToWithdraw,
             uint256[] memory buyAmountsAfterFee,

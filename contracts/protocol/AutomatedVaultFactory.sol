@@ -133,12 +133,10 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function allPairsExistForBuyAssets(
         address depositAsset,
         address[] calldata buyAssets
-    ) external view returns (bool) {
+    ) public view returns (bool) {
         uint256 _buyAssetsLength = buyAssets.length;
         for (uint256 i; i < _buyAssetsLength; ) {
-            if (
-                this.pairExistsForBuyAsset(depositAsset, buyAssets[i]) == false
-            ) {
+            if (!pairExistsForBuyAsset(depositAsset, buyAssets[i])) {
                 return false;
             }
             unchecked {
@@ -151,7 +149,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
     function pairExistsForBuyAsset(
         address depositAsset,
         address buyAsset
-    ) external view returns (bool) {
+    ) public view returns (bool) {
         if (depositAsset == buyAsset) {
             revert Errors.InvalidParameters(
                 "Buy asset list contains deposit asset"
@@ -210,7 +208,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
 
     function _validateCreateVaultInputs(
         ConfigTypes.InitMultiAssetVaultFactoryParams
-            memory initMultiAssetVaultFactoryParams,
+            calldata initMultiAssetVaultFactoryParams,
         ConfigTypes.StrategyParams memory strategyParams
     ) private view {
         if (
@@ -249,7 +247,7 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             }
         }
         if (
-            !this.allPairsExistForBuyAssets(
+            !allPairsExistForBuyAssets(
                 initMultiAssetVaultFactoryParams.depositAsset,
                 initMultiAssetVaultFactoryParams.buyAssets
             )
@@ -301,7 +299,6 @@ contract AutomatedVaultsFactory is IAutomatedVaultsFactory {
             creatorPercentageFeeOnDeposit,
             treasuryPercentageFeeOnBalanceUpdate
         );
-        return _initMultiAssetVaultParams;
     }
 
     function _wrapBuyAddressesIntoIERC20(

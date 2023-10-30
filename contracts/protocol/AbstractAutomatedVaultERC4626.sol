@@ -15,7 +15,7 @@ pragma solidity 0.8.21;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC4626, IERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {IERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 
 abstract contract AbstractAutomatedVaultERC4626 is ERC20, IERC4626 {
     using Math for uint256;
@@ -184,7 +184,7 @@ abstract contract AbstractAutomatedVaultERC4626 is ERC20, IERC4626 {
         return shares;
     }
 
-    function getUnderlyinDecimals() external view returns (uint8) {
+    function getUnderlyingDecimals() public view returns (uint8) {
         return _underlyingDecimals;
     }
 
