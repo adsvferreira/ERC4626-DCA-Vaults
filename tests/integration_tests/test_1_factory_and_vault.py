@@ -28,6 +28,7 @@ from brownie import (
     reverts,
     exceptions,
     TreasuryVault,
+    StrategyUtils,
     StrategyWorker,
     StrategyManager,
     AutomatedVaultERC4626,
@@ -53,7 +54,7 @@ DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 999_999_999_999_999_999_999_999_999
 DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT = 20_000
 DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 10_000
 DEPOSIT_TOKEN_AMOUNT_TRANSFER_TO_VAULT = 20_000
-GT_BALANCE_TESTING_VALUE = 999_999_999_999_999_999_999_999_999_999
+GT_BALANCE_TESTING_VALUE = 3_000_000
 NEGATIVE_AMOUNT_TESTING_VALUE = -1
 
 ################################ Contract Actions ################################
@@ -769,7 +770,7 @@ def test_create_strategy_with_sum_of_buy_percentages_gt_100(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [10_000, 10_000]  # 100%, 100%
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Buy percentages sum is gt 100"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -791,7 +792,7 @@ def test_create_strategy_with_buy_percentage_eq_zero(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [0, 10_000]  # 0%, 100%
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Buy percentage must be gt zero"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -835,7 +836,7 @@ def test_create_strategy_with_not_whitelisted_asset(configs):
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = configs["not_whitelisted_token_address_example"]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address is not whitelisted"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -861,7 +862,7 @@ def test_create_strategy_with_deactivated_deposit_asset(configs):
     strategy_manager.deactivateWhitelistedDepositAsset(
         configs["whitelisted_deposit_assets"][4][0], {"from": dev_wallet}
     )
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address is not whitelisted"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -886,7 +887,7 @@ def test_create_strategy_exceeding_max_number_of_actions(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [50, 50]  # 0.5%, 0.5% -> 100 Actions
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Max number of actions exceeds the limit"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -904,16 +905,17 @@ def test_negative_value_deposit():
     with pytest.raises(OverflowError):
         strategy_vault.deposit(-1, dev_wallet.address, {"from": dev_wallet})
 
-
+# TODO: Right now this test doesn't work because using a token balance greater than the user's reverts with Exceeded max number of actions.
 def test_deposit_gt_deposit_token_balance():
     check_network_is_mainnet_fork()
     # Arrange
     strategy_vault = get_strategy_vault()
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "ERC4626ExceededMaxDeposit", []) + abi.encode(["address", "uint256", "uint256"], [dev_wallet.address, GT_BALANCE_TESTING_VALUE, strategy_vault.maxDeposit(dev_wallet.address)]).hex()):
         strategy_vault.deposit(GT_BALANCE_TESTING_VALUE, dev_wallet.address, {"from": dev_wallet})
 
 
+# Change logic because the user already deposited the min amount required
 def test_deposit_lt_min_deposit_value(configs, deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
@@ -934,8 +936,13 @@ def test_deposit_lt_min_deposit_value(configs, deposit_token):
         DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
         {"from": dev_wallet2},
     )
+    deposit_token.approve(
+        strategy_vault3.address,
+        DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
+        {"from": dev_wallet}
+    )
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Deposit amount lower that the minimum allowed"]).hex()):
         strategy_vault3.deposit(1, dev_wallet.address, {"from": dev_wallet})
 
 
@@ -947,13 +954,18 @@ def test_negative_value_withdraw():
     with pytest.raises(OverflowError):
         strategy_vault2.withdraw(NEGATIVE_AMOUNT_TESTING_VALUE, dev_wallet2, dev_wallet2, {"from": dev_wallet2})
 
-
-def test_withdraw_gt_deposited_balance():
+# TODO: Stop being a noob.
+def test_withdraw_gt_deposited_balance(deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_vault2 = get_strategy_vault(1)
-    # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    deposit_token.approve(
+        strategy_vault2.address,
+        DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
+        {"from": dev_wallet2},
+    )
+    # Act / Assert (owner, assets, maxAssets)
+    with reverts(encode_custom_error(AutomatedVaultERC4626, "ERC4626ExceededMaxWithdraw", []) + abi.encode(["address", "uint256", "uint256"], [dev_wallet2.address, GT_BALANCE_TESTING_VALUE, strategy_vault2.maxWithdraw(dev_wallet2.address)]).hex()):
         strategy_vault2.withdraw(GT_BALANCE_TESTING_VALUE, dev_wallet2, dev_wallet2, {"from": dev_wallet2})
 
 
@@ -969,7 +981,7 @@ def test_create_strategy_with_invalid_buy_frequency_enum_value(configs):
     old_buy_frequency_enum_value = strategy_params[1]
     strategy_params[1] = 99
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(""):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -991,7 +1003,7 @@ def test_create_strategy_with_null_strategy_worker_address(configs):
     old_buy_frequency_enum_value = strategy_params[2]
     strategy_params[2] = NULL_ADDRESS
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["strategyWorker address cannot be zero address"]).hex()):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
