@@ -313,11 +313,11 @@ strategy-params:
   buy_percentages: [500, 500] #5% 5%
   buy_frequency: 0 # Daily
 protocol-params:
-  treasury_fixed_fee_on_vault_creation: 100_000_000_000_000 # Ether amount (0.001)
+  treasury_fixed_fee_on_vault_creation: 1_000_000_000_000_000 # Ether amount (0.001)
   creator_percentage_fee_on_deposit: 50 #0.50%
   treasury_percentage_fee_on_balance_update: 300 #3%
   max_slippage_perc: 50 #0.5%
-  worker_max_expected_gas_units_wei: 100 # unrealistically low value in order to avoid minimum allowed during the testing proccess
+  worker_max_expected_gas_units_wei: 100 # unrealistically low value in order to avoid minimum allowed during the testing proccess - used only for testing
   # The following parameters must be changed if strategy manager default parameters change
   number_of_days_per_buy_frequency:
     0: 1 # DAILY

@@ -54,10 +54,11 @@ DEPOSIT_TOKEN_AMOUNT_TRANSFER_TO_VAULT = 20_000
 GT_BALANCE_TESTING_VALUE = 999_999_999_999_999_999_999_999_999_999
 NEGATIVE_AMOUNT_TESTING_VALUE = -1
 
+
 ################################ Contract Actions ################################
 
 
-def test_create_new_vault(configs, deposit_token):
+def test_create_new_vault(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     verify_flag = config["networks"][network.show_active()]["verify"]
@@ -113,11 +114,11 @@ def test_create_new_vault(configs, deposit_token):
         DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
         {"from": dev_wallet},
     )
-    vaults_factory.createVault(
+    tx = vaults_factory.createVault(
         init_vault_from_factory_params,
         strategy_params,
         DEV_WALLET_DEPOSIT_TOKEN_AMOUNT,
-        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"], "gas_price": gas_price},
     )
     strategy_vault = get_strategy_vault()
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
@@ -131,7 +132,7 @@ def test_create_new_vault(configs, deposit_token):
     treasury_vault_final_native_balance = treasury_vault.balance()
     treasury_vault_final_erc20_balance = deposit_token.balanceOf(treasury_address)
     native_token_fee_paid = (
-        wallet_initial_native_balance - wallet_final_native_balance
+        wallet_initial_native_balance - wallet_final_native_balance - (tx.gas_price * tx.gas_used)
     )  # gas price is 0 in local forked testnet
     final_vault_depositors_list_length = strategy_vault.allDepositorsLength()
     final_wallet_buy_amounts = strategy_vault.getDepositorBuyAmounts(dev_wallet)
@@ -252,7 +253,7 @@ def test_transfer_deposit_token_to_vault(deposit_token):
     assert final_wallet_assets == expected_final_wallet_assets
 
 
-def test_deposit_owned_vault(configs, deposit_token):
+def test_deposit_owned_vault(deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_vault = get_strategy_vault()
@@ -269,7 +270,9 @@ def test_deposit_owned_vault(configs, deposit_token):
         DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
         {"from": dev_wallet},
     )
-    strategy_vault.deposit(DEV_WALLET_2ND_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
+    strategy_vault.deposit(
+        DEV_WALLET_2ND_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet, "gas_price": gas_price}
+    )
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     expected_final_wallet_lp_balance = initial_wallet_lp_balance + convert_assets_to_shares(
         DEV_WALLET_2ND_DEPOSIT_TOKEN_AMOUNT, initial_total_shares, initial_total_assets
@@ -342,7 +345,7 @@ def test_lp_token_transfer_to_future_depositor_before_deposit_not_owned_vault(co
     assert final_wallet2_total_periodic_buy_amount == initial_wallet2_total_periodic_buy_amount
 
 
-def test_deposit_not_owned_vault(configs, deposit_token):
+def test_deposit_not_owned_vault(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_vault = get_strategy_vault()
@@ -366,7 +369,9 @@ def test_deposit_not_owned_vault(configs, deposit_token):
         DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
         {"from": dev_wallet2},
     )
-    strategy_vault.deposit(DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, dev_wallet2.address, {"from": dev_wallet2})
+    strategy_vault.deposit(
+        DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, dev_wallet2.address, {"from": dev_wallet2, "gas_price": gas_price}
+    )
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     expected_final_wallet_lp_balance = initial_wallet_lp_balance + convert_assets_to_shares(
         creator_fee_on_deposit, initial_vault_lp_supply, initial_total_assets
@@ -475,7 +480,7 @@ def test_max_withdraw():
     assert final_vault_lp_supply == expected_vault_lp_supply
 
 
-def test_zero_value_withdraw(configs, deposit_token):
+def test_zero_value_withdraw(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     # New vault creation is not required for this particular test. This was done in order to have multiple vaults created for further tests.
@@ -488,7 +493,7 @@ def test_zero_value_withdraw(configs, deposit_token):
         init_vault_from_factory_params,
         strategy_params,
         DEV_WALLET_DEPOSIT_TOKEN_AMOUNT,
-        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"], "gas_price": gas_price},
     )
     strategy_vault2 = get_strategy_vault(1)
     deposit_token.approve(
@@ -944,7 +949,7 @@ def test_deposit_gt_deposit_token_balance():
         strategy_vault.deposit(GT_BALANCE_TESTING_VALUE, dev_wallet.address, {"from": dev_wallet})
 
 
-def test_deposit_lt_min_deposit_value(configs, deposit_token):
+def test_deposit_lt_min_deposit_value(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     vaults_factory = AutomatedVaultsFactory[-1]
@@ -956,7 +961,7 @@ def test_deposit_lt_min_deposit_value(configs, deposit_token):
         init_vault_from_factory_params,
         strategy_params,
         DEV_WALLET_DEPOSIT_TOKEN_AMOUNT,
-        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
+        {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"], "gas_price": gas_price},
     )
     strategy_vault3 = get_strategy_vault(2)
     deposit_token.approve(

@@ -151,7 +151,7 @@ def test_set_deposit_token_price_safety_factor_by_owner():
     )  # 7 MONTH
 
 
-def test_simulate_min_deposit_value(configs, deposit_token):
+def test_simulate_min_deposit_value(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
@@ -177,7 +177,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     deposit_token_price_safety_factor = strategy_manager.getDepositTokenPriceSafetyFactor(
         whitelisted_deposit_asset[1], max_number_of_strategy_actions, configs["buy_frequency"]
     )
-    current_network_gas_price = __get_current_network_gas_price()
+    current_network_gas_price = gas_price
     deposit_token_decimals = deposit_token.decimals()
     expected_min_deposit_value = floor(
         int(
@@ -218,7 +218,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     )
 
 
-def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token):
+def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
@@ -227,7 +227,7 @@ def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token)
     max_number_of_strategy_actions = 12
     whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
     deposit_token_decimals = deposit_token.decimals()
-    current_network_gas_price = __get_current_network_gas_price()
+    current_network_gas_price = gas_price
     min_deposit_balance_before = strategy_manager.simulateMinDepositValue(
         whitelisted_deposit_asset,
         max_number_of_strategy_actions,
@@ -323,24 +323,3 @@ def test_deposit_generating_to_many_actions(configs):
     # Act/Assert - Deposit must fail because dev_wallet already had balance in this strategy
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.deposit(max_wallet_deposit_balance, dev_wallet.address, {"from": dev_wallet})
-
-
-################################ Aux Functions ################################
-
-
-def __get_current_network_gas_price() -> int:
-    current_network = network.show_active()
-    current_network_mainnet = (
-        current_network if current_network.split("-")[-1] != "fork" else current_network[: -len("-fork")]
-    )
-    infura_api_key = config["rpcs"]["infura_mainnet"]
-    infura_api_endpoint = f"https://{current_network_mainnet}net.infura.io/v3/{infura_api_key}"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "jsonrpc": "2.0",
-        "method": "eth_gasPrice",
-        "params": [],
-        "id": 1,
-    }
-    response = requests.post(infura_api_endpoint, headers=headers, data=json.dumps(data))
-    return int(response.json()["result"], 16)
