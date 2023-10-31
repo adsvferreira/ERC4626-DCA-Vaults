@@ -320,17 +320,15 @@ protocol-params:
   worker_max_expected_gas_units_wei: 100 # unrealistically low value in order to avoid minimum allowed during the testing proccess
   # The following parameters must be changed if strategy manager default parameters change
   number_of_days_per_buy_frequency:
-    0: 1 # FIFTEEN_MIN - TODO: Remove after prod
-    1: 1 # DAILY
-    2: 7 # WEEKLY
-    3: 14 # BI_WEEKLY
-    4: 30 # MONTHLY
+    0: 1 # DAILY
+    1: 7 # WEEKLY
+    2: 14 # BI_WEEKLY
+    3: 30 # MONTHLY
   max_number_of_actions_per_frequency:
-    0: 60 # FIFTEEN_MIN - TODO: Remove after prod
-    1: 60 # DAILY
-    2: 52 # WEEKLY
-    3: 26 # BI_WEEKLY
-    4: 12 # MONTHLY
+    0: 60 # DAILY
+    1: 52 # WEEKLY
+    2: 26 # BI_WEEKLY
+    3: 12 # MONTHLY
   gas_cost_safety_factors:
     0: 1000 # THIRTY
     1: 2250 # NINETY
