@@ -45,6 +45,7 @@ interface IStrategyManager {
         Enums.BuyFrequency buyFrequency,
         uint256 treasuryPercentageFeeOnBalanceUpdate,
         uint256 depositAssetDecimals,
-        uint256 previousBalance
+        uint256 previousBalance,
+        uint256 gasPriceWei
     ) external view returns (uint256 minDepositValue);
 }

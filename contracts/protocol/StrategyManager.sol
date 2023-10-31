@@ -234,7 +234,8 @@ contract StrategyManager is IStrategyManager, Ownable {
         Enums.BuyFrequency buyFrequency,
         uint256 treasuryPercentageFeeOnBalanceUpdate,
         uint256 depositAssetDecimals,
-        uint256 previousBalance
+        uint256 previousBalance,
+        uint256 gasPriceWei
     ) external view returns (uint256 minDepositValue) {
         (
             uint256 nativeTokenPrice,
@@ -247,13 +248,6 @@ contract StrategyManager is IStrategyManager, Ownable {
         ) = priceFeedsDataConsumer.getDataFeedLatestPriceAndDecimals(
                 whitelistedDepositAsset.oracleAddress
             );
-        uint256 gasPriceWei = 100_000_000;
-        // GAS PRICE IS ZERO FOR FORKED CHAINS
-        // TODO: UNCOMMENT - TEST ONLY!
-        // assembly {
-        //     gasPriceWei := gasprice()
-        // }
-        //
         // prettier-ignore
         minDepositValue = ((
             nativeTokenPrice 
@@ -288,7 +282,6 @@ contract StrategyManager is IStrategyManager, Ownable {
     }
 
     function _fillNumberOfDaysPerBuyFrequency() private {
-        _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.FIFTEEN_MIN] = 1; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.DAILY] = 1;
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.WEEKLY] = 7;
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.BI_WEEKLY] = 14;
@@ -296,7 +289,6 @@ contract StrategyManager is IStrategyManager, Ownable {
     }
 
     function _fillMaxNumberOfActionsPerFrequencyDefaultMap() private {
-        _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.FIFTEEN_MIN] = 60; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.DAILY] = 60;
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.WEEKLY] = 52;
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.BI_WEEKLY] = 26;

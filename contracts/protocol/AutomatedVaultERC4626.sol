@@ -223,7 +223,8 @@ contract AutomatedVaultERC4626 is
             strategyParams.buyFrequency,
             initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
             uint256(getUnderlyingDecimals()),
-            maxWithdraw(receiver)
+            maxWithdraw(receiver),
+            tx.gasprice
         );
         if (assets < minDepositValue) {
             revert Errors.InvalidParameters(
@@ -285,7 +286,6 @@ contract AutomatedVaultERC4626 is
     }
 
     function _fillUpdateFrequenciesMap() private {
-        _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
         _updateFrequencies[Enums.BuyFrequency.WEEKLY] = 604800;
         _updateFrequencies[Enums.BuyFrequency.BI_WEEKLY] = 1209600;
