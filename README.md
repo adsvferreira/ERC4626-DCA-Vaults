@@ -13,7 +13,7 @@
 - **Resolver:** 0xB6b781080E2ffCF5209d7650d0962479f144c550
 - **StrategyManager:** 0xEBF39FB51c23918F2FcbbD0600Bb6dE1546a37C3
 - **PriceFeedsDataConsumer:** 0xAf91B43247E70b96387392d26c452B587e9870Fa
-- **Gelato Msg Sender:** 0xf454b2cb8c149a64acde77d8b74b10019a21e2bf - DEPRECATED
+- **Gelato Msg Sender:** 0xf454b2cb8c149a64acde77d8b74b10019a21e2bf
 
 # Project Setup Guide
 
