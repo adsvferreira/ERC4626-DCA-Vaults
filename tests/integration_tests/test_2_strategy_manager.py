@@ -1,7 +1,9 @@
 import json
 import pytest
 import requests
+from eth_abi import abi 
 from math import floor
+from helpers import encode_custom_error
 from helpers import (
     get_strategy_vault,
     get_account_from_pk,
@@ -12,6 +14,7 @@ from brownie import (
     PriceFeedsDataConsumer,
     config,
     network,
+    reverts,
     exceptions,
 )
 
@@ -36,9 +39,9 @@ def test_whitelist_new_address_by_owner(configs):
     # Act
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
-    print(strategy_manager.getWhitelistedDepositAssetAddresses())
     assert strategy_manager.getWhitelistedDepositAssetAddresses() == [
         configs["whitelisted_deposit_assets"][0][0],
+        configs["token_not_paired_with_weth_address"],
         configs["whitelisted_deposit_assets"][4][0],
     ]
 
@@ -52,7 +55,7 @@ def test_repeated_address_by_owner(configs):
     strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet})
     # Assert
     assert (
-        len(strategy_manager.getWhitelistedDepositAssetAddresses()) == 2
+        len(strategy_manager.getWhitelistedDepositAssetAddresses()) == 3
     )  # repeated address shoudn't be added to the list
     assert (
         strategy_manager.getWhitelistedDepositAsset(configs["whitelisted_deposit_assets"][4][0])
@@ -267,7 +270,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     strategy_manager = StrategyManager[-1]
     deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][1]
     # Act/ Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyManager, "OwnableInvalidOwner", []) + abi.encode(["string"], [dev_wallet2.address]).hex()):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
 
 
