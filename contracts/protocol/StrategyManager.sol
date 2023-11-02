@@ -110,7 +110,7 @@ contract StrategyManager is IStrategyManager, Ownable {
         return _maxNumberOfActionsPerFrequency[buyFrequency];
     }
 
-    function getMaxExpectedGasUnits() external view returns (uint256) {
+    function getMaxExpectedGasUnits() public view returns (uint256) {
         return _MAX_EXPECTED_GAS_UNITS_WEI;
     }
 
@@ -131,19 +131,27 @@ contract StrategyManager is IStrategyManager, Ownable {
         return _whitelistedDepositAssets[depositAssetAddress];
     }
 
+    /**
+        @dev The `getGasCostSafetyFactor` does not have a `fallback return` in case any of the if conditions 
+        are met because it implies that maxNumberOfDays > 365. 
+        In this case isMaxNumberOfStrategyActionsValid (previously checked) MUST return false.
+        Keep this in mind if you need to modify any of the following mapping parameters hardcoded in this contract:
+        - _numberOfDaysPerBuyFrequency
+        - _maxNumberOfActionsPerFrequency
+    */
     function getGasCostSafetyFactor(
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
         uint256 maxNumberOfDays = buyFrequencyInDays *
             maxNumberOfStrategyActions;
-        bool ismaxNumberOfStrategyActionsValidBool = this
-            .ismaxNumberOfStrategyActionsValid(
+        bool isMaxNumberOfStrategyActionsValidBool = this
+            .isMaxNumberOfStrategyActionsValid(
                 maxNumberOfStrategyActions,
                 buyFrequency
             );
-        if (!ismaxNumberOfStrategyActionsValidBool) {
+        if (!isMaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
@@ -168,18 +176,26 @@ contract StrategyManager is IStrategyManager, Ownable {
         }
     }
 
+    /**
+        @dev The `getDepositTokenPriceSafetyFactor` does not have a `fallback return` in case any of the if conditions 
+        are met because it implies that maxNumberOfDays > 365. 
+        In this case isMaxNumberOfStrategyActionsValid (previously checked) MUST return false.
+        Keep this in mind if you need to modify any of the following mapping parameters hardcoded in this contract:
+        - _numberOfDaysPerBuyFrequency
+        - _maxNumberOfActionsPerFrequency
+    */
     function getDepositTokenPriceSafetyFactor(
         Enums.AssetTypes assetType,
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 buyFrequencyInDays = _numberOfDaysPerBuyFrequency[buyFrequency];
-        bool ismaxNumberOfStrategyActionsValidBool = this
-            .ismaxNumberOfStrategyActionsValid(
+        bool isMaxNumberOfStrategyActionsValidBool = this
+            .isMaxNumberOfStrategyActionsValid(
                 maxNumberOfStrategyActions,
                 buyFrequency
             );
-        if (!ismaxNumberOfStrategyActionsValidBool) {
+        if (!isMaxNumberOfStrategyActionsValidBool) {
             revert Errors.InvalidParameters(
                 "Max number of actions exceeds the limit"
             );
@@ -218,7 +234,8 @@ contract StrategyManager is IStrategyManager, Ownable {
         Enums.BuyFrequency buyFrequency,
         uint256 treasuryPercentageFeeOnBalanceUpdate,
         uint256 depositAssetDecimals,
-        uint256 previousBalance
+        uint256 previousBalance,
+        uint256 gasPriceWei
     ) external view returns (uint256 minDepositValue) {
         (
             uint256 nativeTokenPrice,
@@ -231,26 +248,19 @@ contract StrategyManager is IStrategyManager, Ownable {
         ) = priceFeedsDataConsumer.getDataFeedLatestPriceAndDecimals(
                 whitelistedDepositAsset.oracleAddress
             );
-        uint256 gasPriceWei = 100_000_000;
-        // GAS PRICE IS ZERO FOR FORKED CHAINS
-        // TODO: UNCOMMENT - TEST ONLY!
-        // assembly {
-        //     gasPriceWei := gasprice()
-        // }
-        //
         // prettier-ignore
         minDepositValue = ((
             nativeTokenPrice 
             * PercentageMath.PERCENTAGE_FACTOR 
-            * this.getMaxExpectedGasUnits() 
+            * getMaxExpectedGasUnits() 
             * maxNumberOfStrategyActions 
             * gasPriceWei 
-            * this.getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) 
+            * getGasCostSafetyFactor(maxNumberOfStrategyActions,buyFrequency) 
             * (10 ** (tokenPriceDecimals + depositAssetDecimals))
         ) / (
             tokenPrice 
             * treasuryPercentageFeeOnBalanceUpdate 
-            * this.getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
+            * getDepositTokenPriceSafetyFactor(whitelistedDepositAsset.assetType, maxNumberOfStrategyActions,buyFrequency)
             * (10 ** (18 + nativeTokenPriceDecimals))
         ));
         minDepositValue = minDepositValue > previousBalance
@@ -258,7 +268,7 @@ contract StrategyManager is IStrategyManager, Ownable {
             : 0;
     }
 
-    function ismaxNumberOfStrategyActionsValid(
+    function isMaxNumberOfStrategyActionsValid(
         uint256 maxNumberOfStrategyActions,
         Enums.BuyFrequency buyFrequency
     ) external view returns (bool) {
@@ -272,7 +282,6 @@ contract StrategyManager is IStrategyManager, Ownable {
     }
 
     function _fillNumberOfDaysPerBuyFrequency() private {
-        _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.FIFTEEN_MIN] = 1; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.DAILY] = 1;
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.WEEKLY] = 7;
         _numberOfDaysPerBuyFrequency[Enums.BuyFrequency.BI_WEEKLY] = 14;
@@ -280,7 +289,6 @@ contract StrategyManager is IStrategyManager, Ownable {
     }
 
     function _fillMaxNumberOfActionsPerFrequencyDefaultMap() private {
-        _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.FIFTEEN_MIN] = 60; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.DAILY] = 60;
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.WEEKLY] = 52;
         _maxNumberOfActionsPerFrequency[Enums.BuyFrequency.BI_WEEKLY] = 26;

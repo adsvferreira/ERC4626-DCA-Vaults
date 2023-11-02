@@ -14,11 +14,6 @@ interface IAutomatedVaultsFactory {
         uint256 depositBalance
     ) external payable returns (address newVaultAddress);
 
-    function allPairsExistForBuyAssets(
-        address depositAsset,
-        address[] memory buyAssets
-    ) external view returns (bool);
-
     function pairExistsForBuyAsset(
         address depositAsset,
         address buyAsset

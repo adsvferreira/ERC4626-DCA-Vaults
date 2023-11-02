@@ -82,53 +82,50 @@ def test_strategy_manager_default_parameters():
     deposit_token_price_safety_factor = config["protocol-params"]["deposit_token_price_safety_factor"]
     # Assert
     assert strategy_manager.getMaxExpectedGasUnits() == config["protocol-params"]["worker_max_expected_gas_units_wei"]
-    assert (
-        strategy_manager.getMaxNumberOfActionsPerFrequency(0) == max_number_of_actions_per_frequency[0]
-    )  # TODO: Remove after prod
+    assert strategy_manager.getMaxNumberOfActionsPerFrequency(0) == max_number_of_actions_per_frequency[0]
     assert strategy_manager.getMaxNumberOfActionsPerFrequency(1) == max_number_of_actions_per_frequency[1]
     assert strategy_manager.getMaxNumberOfActionsPerFrequency(2) == max_number_of_actions_per_frequency[2]
     assert strategy_manager.getMaxNumberOfActionsPerFrequency(3) == max_number_of_actions_per_frequency[3]
-    assert strategy_manager.getMaxNumberOfActionsPerFrequency(4) == max_number_of_actions_per_frequency[4]
-    assert strategy_manager.getGasCostSafetyFactor(20, 1) == gas_cost_safety_factors[0]  # 20 DAYS
-    assert strategy_manager.getGasCostSafetyFactor(10, 2) == gas_cost_safety_factors[1]  # 10 WEEKS
-    assert strategy_manager.getGasCostSafetyFactor(10, 3) == gas_cost_safety_factors[2]  # 20 WEEKS
-    assert strategy_manager.getGasCostSafetyFactor(11, 4) == gas_cost_safety_factors[3]  # 11 MONTHS
+    assert strategy_manager.getGasCostSafetyFactor(20, 0) == gas_cost_safety_factors[0]  # 20 DAYS
+    assert strategy_manager.getGasCostSafetyFactor(10, 1) == gas_cost_safety_factors[1]  # 10 WEEKS
+    assert strategy_manager.getGasCostSafetyFactor(10, 2) == gas_cost_safety_factors[2]  # 20 WEEKS
+    assert strategy_manager.getGasCostSafetyFactor(11, 3) == gas_cost_safety_factors[3]  # 11 MONTHS
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(0, 20, 1) == deposit_token_price_safety_factor[0][0]
+        strategy_manager.getDepositTokenPriceSafetyFactor(0, 20, 0) == deposit_token_price_safety_factor[0][0]
     )  # 20 DAYS/STABLE
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(1, 20, 1) == deposit_token_price_safety_factor[1][0]
+        strategy_manager.getDepositTokenPriceSafetyFactor(1, 20, 0) == deposit_token_price_safety_factor[1][0]
     )  # 20 DAYS/ETH_BTC
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(2, 20, 1) == deposit_token_price_safety_factor[2][0]
+        strategy_manager.getDepositTokenPriceSafetyFactor(2, 20, 0) == deposit_token_price_safety_factor[2][0]
     )  # 20 DAYS/BLUE_CHIP
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(0, 10, 2) == deposit_token_price_safety_factor[0][1]
+        strategy_manager.getDepositTokenPriceSafetyFactor(0, 10, 1) == deposit_token_price_safety_factor[0][1]
     )  # 10 WEEKS/STABLE
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(1, 10, 2) == deposit_token_price_safety_factor[1][1]
+        strategy_manager.getDepositTokenPriceSafetyFactor(1, 10, 1) == deposit_token_price_safety_factor[1][1]
     )  # 10 WEEKS/ETH_BTC
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(2, 10, 2) == deposit_token_price_safety_factor[2][1]
+        strategy_manager.getDepositTokenPriceSafetyFactor(2, 10, 1) == deposit_token_price_safety_factor[2][1]
     )  # 10 WEEKS/BLUE_CHIP
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(0, 10, 3) == deposit_token_price_safety_factor[0][2]
+        strategy_manager.getDepositTokenPriceSafetyFactor(0, 10, 2) == deposit_token_price_safety_factor[0][2]
     )  # 20 WEEKS/STABLE
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(1, 10, 3) == deposit_token_price_safety_factor[1][2]
+        strategy_manager.getDepositTokenPriceSafetyFactor(1, 10, 2) == deposit_token_price_safety_factor[1][2]
     )  # 20 WEEKS/ETH_BTC
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(2, 10, 3) == deposit_token_price_safety_factor[2][2]
+        strategy_manager.getDepositTokenPriceSafetyFactor(2, 10, 2) == deposit_token_price_safety_factor[2][2]
     )  # 20 WEEKS/BLUE_CHIP
 
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(0, 11, 4) == deposit_token_price_safety_factor[0][3]
+        strategy_manager.getDepositTokenPriceSafetyFactor(0, 11, 3) == deposit_token_price_safety_factor[0][3]
     )  # 11 MONTHS/STABLE
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(1, 11, 4) == deposit_token_price_safety_factor[1][3]
+        strategy_manager.getDepositTokenPriceSafetyFactor(1, 11, 3) == deposit_token_price_safety_factor[1][3]
     )  # 11 MONTHS/ETH_BTC
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(2, 11, 4) == deposit_token_price_safety_factor[2][3]
+        strategy_manager.getDepositTokenPriceSafetyFactor(2, 11, 3) == deposit_token_price_safety_factor[2][3]
     )  # 11 MONTHS/BLUE_CHIP
 
 
@@ -154,11 +151,11 @@ def test_set_deposit_token_price_safety_factor_by_owner():
     )  # > 180 DAYS/BLUE_CHIP
     # Assert
     assert (
-        strategy_manager.getDepositTokenPriceSafetyFactor(2, 7, 4) == new_deposit_token_price_safety_factor
+        strategy_manager.getDepositTokenPriceSafetyFactor(2, 7, 3) == new_deposit_token_price_safety_factor
     )  # 7 MONTH
 
 
-def test_simulate_min_deposit_value(configs, deposit_token):
+def test_simulate_min_deposit_value(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
@@ -184,7 +181,7 @@ def test_simulate_min_deposit_value(configs, deposit_token):
     deposit_token_price_safety_factor = strategy_manager.getDepositTokenPriceSafetyFactor(
         whitelisted_deposit_asset[1], max_number_of_strategy_actions, configs["buy_frequency"]
     )
-    current_network_gas_price = __get_current_network_gas_price()
+    current_network_gas_price = gas_price
     deposit_token_decimals = deposit_token.decimals()
     expected_min_deposit_value = floor(
         int(
@@ -219,12 +216,13 @@ def test_simulate_min_deposit_value(configs, deposit_token):
             configs["treasury_percentage_fee_on_balance_update"],
             deposit_token_decimals,
             depositor_previous_balance,
+            current_network_gas_price,
         )
         == expected_min_deposit_value
     )
 
 
-def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token):
+def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token, gas_price):
     check_network_is_mainnet_fork()
     # Arrange
     strategy_manager = StrategyManager[-1]
@@ -233,6 +231,7 @@ def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token)
     max_number_of_strategy_actions = 12
     whitelisted_deposit_asset = configs["whitelisted_deposit_assets"][0]  # USDC.e
     deposit_token_decimals = deposit_token.decimals()
+    current_network_gas_price = gas_price
     min_deposit_balance_before = strategy_manager.simulateMinDepositValue(
         whitelisted_deposit_asset,
         max_number_of_strategy_actions,
@@ -240,6 +239,7 @@ def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token)
         configs["treasury_percentage_fee_on_balance_update"],
         deposit_token_decimals,
         depositor_previous_balance,
+        current_network_gas_price,
     )
     # Act
     strategy_vault.deposit(DEV_WALLET_DEPOSIT_TOKEN_AMOUNT, dev_wallet.address, {"from": dev_wallet})
@@ -251,6 +251,7 @@ def test_simulate_min_deposit_value_after_wallet_deposit(configs, deposit_token)
         configs["treasury_percentage_fee_on_balance_update"],
         deposit_token_decimals,
         new_depositor_previous_balance,
+        current_network_gas_price,
     )
     expected_min_deposit_balance_after = (
         min_deposit_balance_before - DEV_WALLET_DEPOSIT_TOKEN_AMOUNT
@@ -326,24 +327,3 @@ def test_deposit_generating_to_many_actions(configs):
     # Act/Assert - Deposit must fail because dev_wallet already had balance in this strategy
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.deposit(max_wallet_deposit_balance, dev_wallet.address, {"from": dev_wallet})
-
-
-################################ Aux Functions ################################
-
-
-def __get_current_network_gas_price() -> int:
-    current_network = network.show_active()
-    current_network_mainnet = (
-        current_network if current_network.split("-")[-1] != "fork" else current_network[: -len("-fork")]
-    )
-    infura_api_key = config["rpcs"]["infura_mainnet"]
-    infura_api_endpoint = f"https://{current_network_mainnet}net.infura.io/v3/{infura_api_key}"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "jsonrpc": "2.0",
-        "method": "eth_gasPrice",
-        "params": [],
-        "id": 1,
-    }
-    response = requests.post(infura_api_endpoint, headers=headers, data=json.dumps(data))
-    return int(response.json()["result"], 16)

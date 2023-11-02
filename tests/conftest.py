@@ -1,4 +1,6 @@
+import json
 import pytest
+import requests
 from typing import List
 from brownie import config, network, Contract
 from helpers import check_network_is_mainnet_fork
@@ -57,3 +59,22 @@ def dex_router() -> Contract:
         config["networks"][network.show_active()]["dex_router_address"],
         univ2_dex_router_abi,
     )
+
+
+@pytest.fixture()
+def gas_price() -> int:
+    current_network = network.show_active()
+    current_network_mainnet = (
+        current_network if current_network.split("-")[-1] != "fork" else current_network[: -len("-fork")]
+    )
+    infura_api_key = config["rpcs"]["infura_mainnet"]
+    infura_api_endpoint = f"https://{current_network_mainnet}net.infura.io/v3/{infura_api_key}"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "jsonrpc": "2.0",
+        "method": "eth_gasPrice",
+        "params": [],
+        "id": 1,
+    }
+    response = requests.post(infura_api_endpoint, headers=headers, data=json.dumps(data))
+    return int(response.json()["result"], 16)

@@ -53,9 +53,7 @@ contract AutomatedVaultERC4626 is
     uint256 public allDepositorsLength;
 
     /**
-     * @notice Periodic buy amounts are calculated as a percentage of the first deposit.
-     * A user's first deposit is detected when their vault balance is zero.
-     * To adjust the absolute amounts swapped periodically, withdraw the entire balance and deposit a different amount.
+     * @notice Periodic buy amounts are calculated as a percentage of the first deposit and cannot be reset later.
      */
     mapping(address depositor => uint256) private _initialDepositBalances;
     mapping(address depositor => uint256) private _lastUpdatePerDepositor;
@@ -189,12 +187,12 @@ contract AutomatedVaultERC4626 is
     function _beforeUnderlyingTransferHook(
         address receiver,
         uint256 assets
-    ) internal override {
+    ) internal view override {
         ConfigTypes.WhitelistedDepositAsset
             memory whitelistedDepositAsset = _strategyManager
                 .getWhitelistedDepositAsset(asset());
         uint256 depositorTotalPeriodicBuyAmount;
-        if (balanceOf(receiver) == 0) {
+        if (_depositorBuyAmounts[receiver].length == 0) {
             uint256 _buyAssetsLength = buyAssetsLength;
             for (uint256 i; i < _buyAssetsLength; ) {
                 depositorTotalPeriodicBuyAmount += assets.percentMul(
@@ -224,8 +222,9 @@ contract AutomatedVaultERC4626 is
             maxNumberOfStrategyActions,
             strategyParams.buyFrequency,
             initMultiAssetsVaultParams.treasuryPercentageFeeOnBalanceUpdate,
-            uint256(this.getUnderlyinDecimals()),
-            maxWithdraw(receiver)
+            uint256(getUnderlyingDecimals()),
+            maxWithdraw(receiver),
+            tx.gasprice
         );
         if (assets < minDepositValue) {
             revert Errors.InvalidParameters(
@@ -241,7 +240,7 @@ contract AutomatedVaultERC4626 is
     ) internal override {
         address creator = initMultiAssetsVaultParams.creator;
         if (receiver == creator) {
-            if (balanceOf(receiver) == 0 && shares > 0) {
+            if (_depositorBuyAmounts[receiver].length == 0 && shares > 0) {
                 getDepositorAddress.push(receiver);
                 ++allDepositorsLength;
                 _initialDepositBalances[receiver] = assets;
@@ -267,7 +266,10 @@ contract AutomatedVaultERC4626 is
                 creatorShares
             );
 
-            if (balanceOf(receiver) == 0 && depositorShares > 0) {
+            if (
+                _depositorBuyAmounts[receiver].length == 0 &&
+                depositorShares > 0
+            ) {
                 getDepositorAddress.push(receiver);
                 ++allDepositorsLength;
                 _initialDepositBalances[receiver] = depositorAssets;
@@ -284,7 +286,6 @@ contract AutomatedVaultERC4626 is
     }
 
     function _fillUpdateFrequenciesMap() private {
-        _updateFrequencies[Enums.BuyFrequency.FIFTEEN_MIN] = 900; //TEST ONLY -> TODO: DELETE BEFORE PROD DEPLOYMENT
         _updateFrequencies[Enums.BuyFrequency.DAILY] = 86400;
         _updateFrequencies[Enums.BuyFrequency.WEEKLY] = 604800;
         _updateFrequencies[Enums.BuyFrequency.BI_WEEKLY] = 1209600;
