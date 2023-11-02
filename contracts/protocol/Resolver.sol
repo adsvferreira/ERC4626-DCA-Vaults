@@ -38,20 +38,23 @@ contract Resolver {
             AutomatedVaultERC4626 vault = AutomatedVaultERC4626(allVaults[i]);
             uint256 _vaulDepositorsLength = vault.allDepositorsLength();
             for (uint256 j; j < _vaulDepositorsLength; ) {
+                address depositorAddress = vault.getDepositorAddress(j);
+                uint256 depositorTotalPeriodicBuyAmount = vault
+                    .getDepositorTotalPeriodicBuyAmount(depositorAddress);
                 execPayload = abi.encodeWithSelector(
                     IController.triggerStrategyAction.selector,
                     strategyWorkerAddress,
                     address(vault),
-                    vault.getDepositorAddress(j)
+                    depositorAddress
                 );
 
                 canExec = _canExec(
-                    vault.lastUpdateOf(vault.getDepositorAddress(j)),
+                    vault.lastUpdateOf(depositorAddress),
                     vault.getUpdateFrequencyTimestamp(),
-                    vault.balanceOf(vault.getDepositorAddress(j)),
-                    vault.getDepositorTotalPeriodicBuyAmount(
-                        vault.getDepositorAddress(j)
-                    )
+                    vault.maxWithdraw(depositorAddress),
+                    vault.allowance(depositorAddress, strategyWorkerAddress),
+                    depositorTotalPeriodicBuyAmount,
+                    vault.convertToShares(depositorTotalPeriodicBuyAmount)
                 );
 
                 if (canExec) {
@@ -72,10 +75,13 @@ contract Resolver {
         uint256 lastUpdateOf,
         uint256 updateFrequencyTimestamp,
         uint256 depositorBalance,
-        uint256 depositorTotalPeriodicBuyAmount
+        uint256 depositorAllowance,
+        uint256 depositorTotalPeriodicBuyAmount,
+        uint256 depositorTotalPeriodicBuyAmountShares
     ) private view returns (bool) {
         return (((block.timestamp >=
             (lastUpdateOf + updateFrequencyTimestamp)) || lastUpdateOf == 0) &&
-            (depositorBalance >= depositorTotalPeriodicBuyAmount));
+            (depositorBalance >= depositorTotalPeriodicBuyAmount) &&
+            (depositorAllowance >= depositorTotalPeriodicBuyAmountShares));
     }
 }
