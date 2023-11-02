@@ -73,7 +73,7 @@ def test_create_new_vault(configs, deposit_token, gas_price):
     treasury_address = treasury_vault.address
     controller = deploy_controller(dev_wallet, verify_flag)
     controller_address = controller.address
-    deploy_strategy_worker(
+    strategy_worker = deploy_strategy_worker(
         dev_wallet,
         verify_flag,
         configs["dex_router_address"],
@@ -124,6 +124,7 @@ def test_create_new_vault(configs, deposit_token, gas_price):
         {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"], "gas_price": gas_price},
     )
     strategy_vault = get_strategy_vault()
+    strategy_vault.approve(strategy_worker.address, DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT, {"from": dev_wallet})
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     total_shares = strategy_vault.totalSupply()
     total_assets = strategy_vault.totalAssets()
@@ -375,6 +376,9 @@ def test_deposit_not_owned_vault(configs, deposit_token, gas_price):
     strategy_vault.deposit(
         DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT, dev_wallet2.address, {"from": dev_wallet2, "gas_price": gas_price}
     )
+    strategy_vault.approve(
+        StrategyWorker[-1].address, DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT, {"from": dev_wallet2}
+    )
     final_wallet_lp_balance = strategy_vault.balanceOf(dev_wallet)
     expected_final_wallet_lp_balance = initial_wallet_lp_balance + convert_assets_to_shares(
         creator_fee_on_deposit, initial_vault_lp_supply, initial_total_assets
@@ -499,12 +503,18 @@ def test_zero_value_withdraw(configs, deposit_token, gas_price):
         {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"], "gas_price": gas_price},
     )
     strategy_vault2 = get_strategy_vault(1)
+    strategy_vault2.approve(
+        StrategyWorker[-1].address, DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT, {"from": dev_wallet2}
+    )
     deposit_token.approve(
         strategy_vault2.address,
-        DEV_WALLET_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
+        DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT,
         {"from": dev_wallet2},
     )
     strategy_vault2.deposit(DEV_WALLET_2ND_DEPOSIT_TOKEN_AMOUNT, dev_wallet2.address, {"from": dev_wallet2})
+    strategy_vault2.approve(
+        StrategyWorker[-1].address, DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT, {"from": dev_wallet2}
+    )
     initial_wallet2_lp_balance = strategy_vault2.balanceOf(dev_wallet2)
     initial_vault_lp_supply = strategy_vault2.totalSupply()
     initial_vault_depositors_list_length = strategy_vault2.allDepositorsLength()
