@@ -271,7 +271,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     strategy_manager = StrategyManager[-1]
     deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][1]
     # Act/ Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableInvalidOwner", []) + abi.encode(["string"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
 
 
@@ -281,7 +281,7 @@ def test_deactivate_whitelisted_address_by_non_owner(configs):
     strategy_manager = StrategyManager[-1]
     deposit_asset_to_deactivate = configs["whitelisted_deposit_assets"][4][0]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
         strategy_manager.deactivateWhitelistedDepositAsset(deposit_asset_to_deactivate, {"from": dev_wallet2})
 
 
