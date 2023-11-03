@@ -1,28 +1,32 @@
 import pytest
 from typing import List
+from Crypto.Hash import keccak
 from scripts.deploy import deploy_resolver
+from eth_abi import abi 
 from helpers import (
     RoundingMethod,
     get_strategy_vault,
+    NULL_ADDRESS,
     get_account_from_pk,
+    encode_custom_error,
     convert_assets_to_shares,
     convert_shares_to_assets,
     perc_mul_contracts_simulate,
     check_network_is_mainnet_fork,
-    NULL_ADDRESS,
 )
 from brownie import (
-    Resolver,
-    Controller,
-    TreasuryVault,
-    StrategyWorker,
-    AutomatedVaultERC4626,
-    AutomatedVaultsFactory,
     web3,
     config,
     network,
+    reverts,
     Contract,
+    Resolver,
     exceptions,
+    Controller,
+    TreasuryVault,
+    StrategyWorker,
+    AutomatedVaultsFactory,
+    AutomatedVaultERC4626,
 )
 
 dev_wallet = get_account_from_pk(1)
@@ -32,6 +36,7 @@ DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT = 999_999_999_999_999_999_9
 DEV_WALLET_DEPOSIT_TOKEN_AMOUNT = 20_000
 
 CONTROLLER_CALLER_BYTES_ROLE = web3.keccak(text="CONTROLLER_CALLER")
+ENCODER_SEPARATOR = "0000000000000000000000000000000000000000000000000000000000000000"
 
 ################################ Contract Actions ################################
 
@@ -198,7 +203,7 @@ def test_trigger_strategy_action_before_next_valid_timestamp():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "UpdateConditionsNotMet", [])):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
@@ -212,7 +217,7 @@ def test_trigger_strategy_action_by_address_without_controller_role():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(Controller, "AccessControlUnauthorizedAccount", []) + abi.encode(["address", "bytes32"], [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE]).hex() ):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
@@ -228,7 +233,7 @@ def test_add_controller_role_to_address():
     # Act
     controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "UpdateConditionsNotMet", [])):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
@@ -245,7 +250,7 @@ def test_remove_controller_role_from_address():
     # Act
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(Controller, "AccessControlUnauthorizedAccount", []) + abi.encode(["address", "bytes32"], [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE]).hex()):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
@@ -269,7 +274,7 @@ def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_balance_wa
     # dev_wallet withdrew the full vault lp balance in a previous test: "test_total_withdraw" and received some dust
     # amount in "test_balance_of_creator_without_deposit_after_another_wallet_deposit".
     # Thus, at this point, shoudn't have enough balance to cover total_buy_amount_in_deposit_asset
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "UpdateConditionsNotMet", [])):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet, {"from": dev_wallet}
         )
@@ -284,7 +289,7 @@ def test_trigger_strategy_action_by_owner_address_for_insufficient_lp_allowance_
     strategy_vault_address = strategy_vault.address
     # Act / Assert
     strategy_vault.approve(strategy_worker_address, 0, {"from": dev_wallet2})
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "UpdateConditionsNotMet", [])):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
@@ -299,7 +304,7 @@ def test_trigger_strategy_action_with_invalid_worker_address():
     strategy_vault.approve(
         invalid_worker_address, DEV_WALLET_VAULT_LP_TOKEN_ALLOWANCE_TO_WORKER_AMOUNT, {"from": dev_wallet2}
     )
-    with pytest.raises(exceptions.VirtualMachineError):
+    with pytest.raises(exceptions.VirtualMachineError):  # Reverts with empty string
         controller.triggerStrategyAction(
             invalid_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet}
         )
@@ -310,7 +315,7 @@ def test_trigger_strategy_action_with_invalid_vault_address():
     strategy_worker_address = StrategyWorker[-1].address
     invalid_vault_address = config["networks"][network.show_active()]["treasury_address"]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with pytest.raises(exceptions.VirtualMachineError):  # Reverts with empty string
         controller.triggerStrategyAction(
             strategy_worker_address, invalid_vault_address, dev_wallet2, {"from": dev_wallet}
         )
@@ -322,7 +327,7 @@ def test_trigger_strategy_action_with_null_depositor_address():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "ZeroOrNegativeVaultWithdrawAmount", [])):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, NULL_ADDRESS, {"from": dev_wallet}
         )
@@ -334,7 +339,7 @@ def test_add_controller_role_to_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "AccessControlUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex() + ENCODER_SEPARATOR):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == False
 
@@ -345,7 +350,7 @@ def test_remove_controller_role_from_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "AccessControlUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex() + ENCODER_SEPARATOR):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == True
 
@@ -355,7 +360,7 @@ def test_remove_controller_role_from_admin_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "AccessControlUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex() + ENCODER_SEPARATOR):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
@@ -365,7 +370,7 @@ def test_add_controller_role_to_null_address_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error(StrategyWorker, "AccessControlUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex() + ENCODER_SEPARATOR):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS) == False
 

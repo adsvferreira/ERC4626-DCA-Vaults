@@ -1068,7 +1068,7 @@ def test_set_last_update_by_not_worker_address():
     # Arrange
     strategy_vault = get_strategy_vault()
     # Act / Assert
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
 # encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
@@ -1076,7 +1076,7 @@ def test_get_all_vaults_with_start_after_equal_to_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
     # Act / Assert
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         vaults = vaults_factory.getBatchVaults(1, n_vaults)
 
 
@@ -1085,7 +1085,7 @@ def test_get_all_vaults_with_start_after_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
     # Act / Assert
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.getBatchVaults(1, n_vaults + 1)
 
 # encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
@@ -1094,7 +1094,7 @@ def test_get_all_depositors_with_start_after_equal_to_length():
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(0, depositors_len)
 
 # encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
@@ -1103,13 +1103,13 @@ def test_get_all_depositors_with_start_after_bigger_than_length():
     # Vaults have been created in previous tests.
     vault = get_strategy_vault()
     depositors_len = vault.allDepositorsLength()
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(1, depositors_len + 1)
 
 
 def test_transfer_ether_to_vault(deposit_token):
     vault = get_strategy_vault()
-    with reverts(""):
+    with pytest.raises(exceptions.VirtualMachineError):
         dev_wallet.transfer(vault.address, Wei("0.0001 ether"))
 
 
