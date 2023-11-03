@@ -761,7 +761,6 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
             {"from": dev_wallet, "value": configs["treasury_fixed_fee_on_vault_creation"]},
     )
     init_vault_from_factory_params[2] = old_deposit_asset_address
-    print(init_vault_from_factory_params[2])
 
 
 def test_create_strategy_with_different_length_for_buy_tokens_and_percentages(configs):
