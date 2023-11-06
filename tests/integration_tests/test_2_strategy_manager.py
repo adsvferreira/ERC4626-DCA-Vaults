@@ -1,6 +1,6 @@
 from math import floor
-from eth_abi import abi 
-from helpers import encode_custom_error
+from helpers import encode_custom_error_data
+
 from helpers import (
     get_strategy_vault,
     get_account_from_pk,
@@ -266,7 +266,7 @@ def test_whitelist_addresses_by_non_owner(configs):
     strategy_manager = StrategyManager[-1]
     deposit_asset_to_whitelist = configs["whitelisted_deposit_assets"][1]
     # Act/ Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         strategy_manager.addWhitelistedDepositAssets([deposit_asset_to_whitelist], {"from": dev_wallet2})
 
 
@@ -276,7 +276,7 @@ def test_deactivate_whitelisted_address_by_non_owner(configs):
     strategy_manager = StrategyManager[-1]
     deposit_asset_to_deactivate = configs["whitelisted_deposit_assets"][4][0]
     # Act / Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         strategy_manager.deactivateWhitelistedDepositAsset(deposit_asset_to_deactivate, {"from": dev_wallet2})
 
 
@@ -285,7 +285,7 @@ def test_change_max_expected_gas_units_by_non_owner(configs):
     # Arrange
     strategy_manager = StrategyManager[-1]
     # Act / Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         strategy_manager.setMaxExpectedGasUnits(1, {"from": dev_wallet2})
 
 
@@ -295,7 +295,7 @@ def test_set_gas_cost_safety_factor_by_non_owner():
     strategy_manager = StrategyManager[-1]
     new_gas_cost_safety_factor = 800
     # Act / Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         strategy_manager.setGasCostSafetyFactor(0, new_gas_cost_safety_factor, {"from": dev_wallet2})  # <= 30 DAYS
 
 
@@ -305,7 +305,7 @@ def test_set_deposit_token_price_safety_factor_by_non_owner():
     strategy_manager = StrategyManager[-1]
     new_deposit_token_price_safety_factor = 200
     # Act/Assert
-    with reverts(encode_custom_error(StrategyManager, "OwnableUnauthorizedAccount", []) + abi.encode(["address"], [dev_wallet2.address]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         strategy_manager.setDepositTokenPriceSafetyFactor(
             2, 3, new_deposit_token_price_safety_factor, {"from": dev_wallet2}
         )  # > 180 DAYS/BLUE_CHIP
@@ -320,5 +320,5 @@ def test_deposit_generating_to_many_actions(configs):
     depositor_total_periodic_buy_amount = strategy_vault.getDepositorTotalPeriodicBuyAmount(dev_wallet)
     max_wallet_deposit_balance = max_number_of_actions_per_frequency * depositor_total_periodic_buy_amount
     # Act/Assert - Deposit must fail because dev_wallet already had balance in this strategy
-    with reverts(encode_custom_error(StrategyManager, "InvalidParameters", []) + abi.encode(["string"], ["Max number of actions exceeds the limit"]).hex()):
+    with reverts(encode_custom_error_data(StrategyManager, "InvalidParameters", ["string"], ["Max number of actions exceeds the limit"])):
         strategy_vault.deposit(max_wallet_deposit_balance, dev_wallet.address, {"from": dev_wallet})

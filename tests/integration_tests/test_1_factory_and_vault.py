@@ -1,5 +1,4 @@
 import pytest
-from eth_abi import abi
 from typing import Tuple
 
 from helpers import (
@@ -7,8 +6,8 @@ from helpers import (
     RoundingMethod,
     get_strategy_vault,
     get_account_from_pk,
-    encode_custom_error,
     convert_assets_to_shares,
+    encode_custom_error_data,
     convert_shares_to_assets,
     perc_mul_contracts_simulate,
     check_network_is_mainnet_fork,
@@ -22,17 +21,16 @@ from scripts.deploy import (
     deploy_price_feeds_data_consumer,
 )
 from brownie import (
+    TreasuryVault,
+    StrategyWorker,
+    StrategyManager,
+    AutomatedVaultERC4626,
+    AutomatedVaultsFactory,
     Wei,
     config,
     network,
     reverts,
     exceptions,
-    TreasuryVault,
-    StrategyUtils,
-    StrategyWorker,
-    StrategyManager,
-    AutomatedVaultERC4626,
-    AutomatedVaultsFactory,
 )
 
 # In order to run this tests a .env file must be created in the project's root containing 2 dev wallet private keys.
@@ -54,7 +52,7 @@ DEV_WALLET2_DEPOSIT_TOKEN_ALLOWANCE_AMOUNT = 999_999_999_999_999_999_999_999_999
 DEV_WALLET2_DEPOSIT_TOKEN_AMOUNT = 20_000
 DEV_WALLET_WITHDRAW_TOKEN_AMOUNT = 10_000
 DEPOSIT_TOKEN_AMOUNT_TRANSFER_TO_VAULT = 20_000
-GT_BALANCE_TESTING_VALUE = 3_000_000
+GT_BALANCE_TESTING_VALUE = 30_000_000
 NEGATIVE_AMOUNT_TESTING_VALUE = -1
 
 
@@ -605,7 +603,7 @@ def test_instantiate_strategy_from_non_factory_address(configs):
     strategy_params, _ = __get_default_strategy_and_init_vault_params(configs)
     init_vault_params = __get_init_vault_params(configs, dev_wallet)
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "Forbidden", []) + abi.encode(["string"], ["Not factory"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "Forbidden", ["string"], ["Not factory"])):
         AutomatedVaultERC4626.deploy(
             init_vault_params,
             strategy_params,
@@ -642,7 +640,7 @@ def test_create_strategy_with_insufficient_ether_sent_as_fee(configs):
         init_vault_from_factory_params,
     ) = __get_default_strategy_and_init_vault_params(configs)
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidTxEtherAmount", []) + abi.encode(["string"], ["Ether sent must cover vault creation fee"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidTxEtherAmount", ["string"], ["Ether sent must cover vault creation fee"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -663,7 +661,7 @@ def test_create_strategy_with_null_deposit_asset_address(configs):
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = NULL_ADDRESS
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address cannot be zero address"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Deposit address cannot be zero address"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -685,7 +683,7 @@ def test_create_strategy_with_null_buy_asset_address(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = NULL_ADDRESS
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "SwapPathNotFound", ["string"], ["Swap path not found for at least 1 buy asset"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -707,7 +705,7 @@ def test_buy_asset_list_contains_deposit_asset(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = init_vault_from_factory_params[2]
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Buy asset list contains deposit asset"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Buy asset list contains deposit asset"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -729,7 +727,7 @@ def test_create_strategy_with_invalid_swap_path_for_buy_token(configs):
     old_buy_asset_address = init_vault_from_factory_params[3][0]
     init_vault_from_factory_params[3][0] = configs["token_not_paired_with_weth_address"]
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path not found for at least 1 buy asset"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "SwapPathNotFound", ["string"], ["Swap path not found for at least 1 buy asset"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -753,7 +751,7 @@ def test_create_strategy_with_invalid_swap_path_for_deposit_token(configs):
     init_vault_from_factory_params[2] = configs["token_not_paired_with_weth_address"]
     strategy_manager.addWhitelistedDepositAssets([(init_vault_from_factory_params[2], 0, "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3", True )], {"from": dev_wallet})
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "SwapPathNotFound", []) + abi.encode(["string"], ["Swap path between deposit asset and dex main token not found"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "SwapPathNotFound", ["string"], ["Swap path between deposit asset and dex main token not found"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -776,7 +774,7 @@ def test_create_strategy_with_different_length_for_buy_tokens_and_percentages(co
     strategy_params[0] = [strategy_params[0][1]]
     # Act / Assert
     assert len(strategy_params[0]) != len(init_vault_from_factory_params[3])
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["buyPercentages and buyAssets arrays must have the same length"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "InvalidParameters", ["string"], ["buyPercentages and buyAssets arrays must have the same length"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -798,7 +796,7 @@ def test_create_strategy_with_to_many_buy_tokens(configs):
     old_buy_token_addresses = init_vault_from_factory_params[3]
     init_vault_from_factory_params[3] = configs["too_many_buy_token_addresses"]
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["MAX_NUMBER_OF_BUY_ASSETS exceeded"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "InvalidParameters", ["string"], ["MAX_NUMBER_OF_BUY_ASSETS exceeded"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -820,7 +818,7 @@ def test_create_strategy_with_sum_of_buy_percentages_gt_100(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [10_000, 10_000]  # 100%, 100%
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Buy percentages sum is gt 100"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Buy percentages sum is gt 100"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -842,7 +840,7 @@ def test_create_strategy_with_buy_percentage_eq_zero(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [0, 10_000]  # 0%, 100%
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Buy percentage must be gt zero"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "InvalidParameters", ["string"], ["Buy percentage must be gt zero"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -886,7 +884,7 @@ def test_create_strategy_with_not_whitelisted_asset(configs):
     old_deposit_asset_address = init_vault_from_factory_params[2]
     init_vault_from_factory_params[2] = configs["not_whitelisted_token_address_example"]
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address is not whitelisted"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Deposit address is not whitelisted"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -912,7 +910,7 @@ def test_create_strategy_with_deactivated_deposit_asset(configs):
     strategy_manager.deactivateWhitelistedDepositAsset(
         configs["whitelisted_deposit_assets"][4][0], {"from": dev_wallet}
     )
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Deposit address is not whitelisted"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Deposit address is not whitelisted"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -937,7 +935,7 @@ def test_create_strategy_exceeding_max_number_of_actions(configs):
     old_buy_token_percentages = strategy_params[0]
     strategy_params[0] = [50, 50]  # 0.5%, 0.5% -> 100 Actions
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Max number of actions exceeds the limit"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["Max number of actions exceeds the limit"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -961,7 +959,7 @@ def test_deposit_gt_deposit_token_balance():
     # Arrange
     strategy_vault = get_strategy_vault()
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "ERC4626ExceededMaxDeposit", []) + abi.encode(["address", "uint256", "uint256"], [dev_wallet.address, GT_BALANCE_TESTING_VALUE, strategy_vault.maxDeposit(dev_wallet.address)]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "ERC4626ExceededMaxDeposit", ["address", "uint256", "uint256"], [dev_wallet.address, GT_BALANCE_TESTING_VALUE, strategy_vault.maxDeposit(dev_wallet.address)])):
         strategy_vault.deposit(GT_BALANCE_TESTING_VALUE, dev_wallet.address, {"from": dev_wallet})
 
 
@@ -991,7 +989,7 @@ def test_deposit_lt_min_deposit_value(configs, deposit_token, gas_price):
         {"from": dev_wallet}
     )
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Deposit amount lower that the minimum allowed"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "InvalidParameters", ["string"], ["Deposit amount lower that the minimum allowed"])):
         strategy_vault3.deposit(1, dev_wallet.address, {"from": dev_wallet})
 
 
@@ -1003,7 +1001,6 @@ def test_negative_value_withdraw():
     with pytest.raises(OverflowError):
         strategy_vault2.withdraw(NEGATIVE_AMOUNT_TESTING_VALUE, dev_wallet2, dev_wallet2, {"from": dev_wallet2})
 
-# TODO: Stop being a noob.
 def test_withdraw_gt_deposited_balance(deposit_token):
     check_network_is_mainnet_fork()
     # Arrange
@@ -1014,7 +1011,7 @@ def test_withdraw_gt_deposited_balance(deposit_token):
         {"from": dev_wallet2},
     )
     # Act / Assert (owner, assets, maxAssets)
-    with reverts(encode_custom_error(AutomatedVaultERC4626, "ERC4626ExceededMaxWithdraw", []) + abi.encode(["address", "uint256", "uint256"], [dev_wallet2.address, GT_BALANCE_TESTING_VALUE, strategy_vault2.maxWithdraw(dev_wallet2.address)]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultERC4626, "ERC4626ExceededMaxWithdraw", ["address", "uint256", "uint256"], [dev_wallet2.address, GT_BALANCE_TESTING_VALUE, strategy_vault2.maxWithdraw(dev_wallet2.address)])):
         strategy_vault2.withdraw(GT_BALANCE_TESTING_VALUE, dev_wallet2, dev_wallet2, {"from": dev_wallet2})
 
 
@@ -1052,7 +1049,7 @@ def test_create_strategy_with_null_strategy_worker_address(configs):
     old_buy_frequency_enum_value = strategy_params[2]
     strategy_params[2] = NULL_ADDRESS
     # Act / Assert
-    with reverts(encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["strategyWorker address cannot be zero address"]).hex()):
+    with reverts(encode_custom_error_data(AutomatedVaultsFactory, "InvalidParameters", ["string"], ["strategyWorker address cannot be zero address"])):
         vaults_factory.createVault(
             init_vault_from_factory_params,
             strategy_params,
@@ -1070,7 +1067,6 @@ def test_set_last_update_by_not_worker_address():
     with pytest.raises(exceptions.VirtualMachineError):
         strategy_vault.setLastUpdatePerDepositor(dev_wallet, {"from": dev_wallet})
 
-# encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
 def test_get_all_vaults_with_start_after_equal_to_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
@@ -1079,7 +1075,6 @@ def test_get_all_vaults_with_start_after_equal_to_vault_length():
         vaults = vaults_factory.getBatchVaults(1, n_vaults)
 
 
-# encode_custom_error(AutomatedVaultsFactory, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
 def test_get_all_vaults_with_start_after_bigger_than_vault_length():
     vaults_factory = AutomatedVaultsFactory[-1]
     n_vaults = vaults_factory.allVaultsLength()
@@ -1087,7 +1082,6 @@ def test_get_all_vaults_with_start_after_bigger_than_vault_length():
     with pytest.raises(exceptions.VirtualMachineError):
         vaults_factory.getBatchVaults(1, n_vaults + 1)
 
-# encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
 def test_get_all_depositors_with_start_after_equal_to_length():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.
@@ -1096,7 +1090,6 @@ def test_get_all_depositors_with_start_after_equal_to_length():
     with pytest.raises(exceptions.VirtualMachineError):
         vault.getBatchDepositorAddresses(0, depositors_len)
 
-# encode_custom_error(AutomatedVaultERC4626, "InvalidParameters", []) + abi.encode(["string"], ["Invalid interval"]).hex()
 def test_get_all_depositors_with_start_after_bigger_than_length():
     check_network_is_mainnet_fork()
     # Vaults have been created in previous tests.

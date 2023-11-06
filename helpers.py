@@ -2,6 +2,7 @@ import pytest
 from enum import Enum
 from typing import Any
 from math import floor
+from eth_abi import abi
 from eth_utils.abi import function_abi_to_4byte_selector, collapse_if_tuple
 from brownie import AutomatedVaultERC4626, AutomatedVaultsFactory, accounts, config, network
 
@@ -29,7 +30,7 @@ def perc_mul_contracts_simulate(value: int, percentage: int) -> int:
 
 
 class RoundingMethod(Enum):
-    FLOOR = "FLOOT"
+    FLOOR = "FLOOR"
     CEIL = "CEIL"
 
 
@@ -85,9 +86,9 @@ def mul_div_simulate(a: int, b: int, denominator: int, rounding_method: Rounding
     result = floor_result if rounding_method == RoundingMethod.FLOOR else floor_result + 1
     return result
 
-def encode_custom_error(contract_, err_name: str, params: list[Any]) -> str:
+def encode_custom_error(contract, err_name: str, params: list[Any]) -> str:
 
-    contract_abi = contract_.abi
+    contract_abi = contract.abi
 
     for error in [abi for abi in contract_abi if abi["type"] == "error"]:
         # Get error signature components
@@ -109,3 +110,6 @@ def encode_custom_error(contract_, err_name: str, params: list[Any]) -> str:
             return('typed error: 0x'+error_signature_hex+encoded_params)
         
     return 'error not found'
+
+def encode_custom_error_data(contract, err_name: str, param_types: list[str], params: list[str]):
+    return encode_custom_error(contract, err_name, []) + abi.encode(param_types, params).hex()

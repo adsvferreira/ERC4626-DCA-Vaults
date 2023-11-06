@@ -1,10 +1,9 @@
-from eth_abi import abi 
-from brownie import StrategyWorker, exceptions, reverts, web3
+from brownie import StrategyWorker, reverts, web3
 
 from helpers import (
     get_strategy_vault,
-    encode_custom_error, 
     get_account_from_pk, 
+    encode_custom_error_data,
     check_network_is_mainnet_fork,
     )
 
@@ -19,5 +18,5 @@ def test_execute_strategy_action_by_non_controller_address():
     strategy_worker = StrategyWorker[-1]
     strategy_vault_address = get_strategy_vault().address
     # Act / Assert
-    with reverts(encode_custom_error(StrategyWorker, "AccessControlUnauthorizedAccount", []) + abi.encode(["address", "bytes32"], [dev_wallet.address, CONTROLLER_CALLER_BYTES_ROLE]).hex()):
+    with reverts(encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address", "bytes32"], [dev_wallet.address, CONTROLLER_CALLER_BYTES_ROLE])):
         strategy_worker.executeStrategyAction(strategy_vault_address, dev_wallet, {"from": dev_wallet})

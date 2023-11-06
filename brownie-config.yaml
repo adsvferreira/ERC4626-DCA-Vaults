@@ -165,13 +165,13 @@ networks:
           "0xa43a34030088e6510feccfb77e88ee5e7ed0fe64", # oracle_address
           True, # is_active
         ],
-        # Buy asset with no path to main dex token that needs to be whitelisted
-        [
-          "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
-          2, # It's not a blue chip
-          "0xa43a34030088e6510feccfb77e88ee5e7ed0fe64", # fake oracle
-          True, # is_active
-        ],
+      ]
+    whitelist_asset_with_no_path: # Buy asset with no path to main dex token that needs to be whitelisted
+      [
+        "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", # asset_address
+        2, # It's not a blue chip
+        "0xa43a34030088e6510feccfb77e88ee5e7ed0fe64", # fake oracle
+        True, # is_active
       ]
     not_whitelisted_token_address_example: "0x09e18590e8f76b6cf471b3cd75fe1a1a9d2b2c2b" # AIDOGE - This token must have a pair created at the used dex
   arbitrum-main:
