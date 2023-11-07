@@ -7,10 +7,10 @@ from helpers import (
     check_network_is_mainnet_fork,
 )
 from brownie import (
-    config,
-    reverts,
     StrategyManager,
     PriceFeedsDataConsumer,
+    config,
+    reverts,
 )
 
 
