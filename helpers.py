@@ -1,6 +1,6 @@
 import pytest
 from enum import Enum
-from typing import Any
+from typing import Any, List
 from math import floor
 from eth_abi import abi
 from eth_utils.abi import function_abi_to_4byte_selector, collapse_if_tuple
@@ -86,8 +86,8 @@ def mul_div_simulate(a: int, b: int, denominator: int, rounding_method: Rounding
     result = floor_result if rounding_method == RoundingMethod.FLOOR else floor_result + 1
     return result
 
-def encode_custom_error(contract, err_name: str, params: list[Any]) -> str:
 
+def encode_custom_error(contract, err_name: str, params: List[Any]) -> str:
     contract_abi = contract.abi
 
     for error in [abi for abi in contract_abi if abi["type"] == "error"]:
@@ -95,21 +95,22 @@ def encode_custom_error(contract, err_name: str, params: list[Any]) -> str:
         name = error["name"]
         data_types = [collapse_if_tuple(abi_input) for abi_input in error.get("inputs", [])]
         error_signature_hex = function_abi_to_4byte_selector(error).hex()
- 
+
         if err_name == name:
-            encoded_params = ''
+            encoded_params = ""
             for param in params:
-                if(type(param)==str):
-                    return('typed error: 0x'+error_signature_hex+param.zfill(66)[2:])
-                elif(type(param)==int):
-                    val = "{0:#0{1}x}".format(param,66)
+                if type(param) == str:
+                    return "typed error: 0x" + error_signature_hex + param.zfill(66)[2:]
+                elif type(param) == int:
+                    val = "{0:#0{1}x}".format(param, 66)
                     val = val[2:]
                 else:
-                    return 'Unsupported type'
+                    return "Unsupported type"
                 encoded_params = encoded_params + val
-            return('typed error: 0x'+error_signature_hex+encoded_params)
-        
-    return 'error not found'
+            return "typed error: 0x" + error_signature_hex + encoded_params
 
-def encode_custom_error_data(contract, err_name: str, param_types: list[str], params: list[str]):
+    return "error not found"
+
+
+def encode_custom_error_data(contract, err_name: str, param_types: List[str], params: List[str]):
     return encode_custom_error(contract, err_name, []) + abi.encode(param_types, params).hex()
