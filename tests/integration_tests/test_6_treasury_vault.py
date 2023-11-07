@@ -1,6 +1,6 @@
 import pytest
-from brownie import TreasuryVault, exceptions
-from helpers import get_account_from_pk, check_network_is_mainnet_fork
+from brownie import TreasuryVault, reverts
+from helpers import get_account_from_pk, check_network_is_mainnet_fork, encode_custom_error_data
 
 dev_wallet = get_account_from_pk(1)
 dev_wallet2 = get_account_from_pk(2)
@@ -127,7 +127,7 @@ def test_withdraw_native_by_non_owner():
     # Arrange
     treasury_vault = TreasuryVault[-1]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         treasury_vault.withdrawNative(DEV_WALLET_NATIVE_AMOUNT_TO_WITHDRAW, {"from": dev_wallet2})
 
 
@@ -136,7 +136,7 @@ def test_withdraw_erc20_by_non_owner(deposit_token):
     # Arrange
     treasury_vault = TreasuryVault[-1]
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
         treasury_vault.withdrawERC20(deposit_token.address, DEV_WALLET_ERC20_AMOUNT_TO_WITHDRAW, {"from": dev_wallet2})
 
 
@@ -146,7 +146,7 @@ def test_withdraw_native_amount_gt_total_balance_by_owner():
     treasury_vault = TreasuryVault[-1]
     treasury_vault_native_balance = treasury_vault.balance()
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error_data(TreasuryVault, "NotEnoughEther", ["string"], ["Insufficient balance"])):
         treasury_vault.withdrawNative(treasury_vault_native_balance + 1, {"from": dev_wallet})
 
 
@@ -157,7 +157,7 @@ def test_withdraw_erc20_amount_gt_total_balance_by_owner(deposit_token):
     treasury_vault_address = treasury_vault.address
     treasury_vault_deposit_token_balance = deposit_token.balanceOf(treasury_vault_address)
     # Act / Assert
-    with pytest.raises(exceptions.VirtualMachineError):
+    with reverts(encode_custom_error_data(TreasuryVault, "InvalidTokenBalance", ["string"], ["Insufficient balance"])):
         treasury_vault.withdrawERC20(
             deposit_token.address, treasury_vault_deposit_token_balance + 1, {"from": dev_wallet}
         )
