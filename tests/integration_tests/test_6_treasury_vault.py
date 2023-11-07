@@ -127,7 +127,9 @@ def test_withdraw_native_by_non_owner():
     # Arrange
     treasury_vault = TreasuryVault[-1]
     # Act / Assert
-    with reverts(encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
+    with reverts(
+        encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])
+    ):
         treasury_vault.withdrawNative(DEV_WALLET_NATIVE_AMOUNT_TO_WITHDRAW, {"from": dev_wallet2})
 
 
@@ -136,7 +138,9 @@ def test_withdraw_erc20_by_non_owner(deposit_token):
     # Arrange
     treasury_vault = TreasuryVault[-1]
     # Act / Assert
-    with reverts(encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])):
+    with reverts(
+        encode_custom_error_data(TreasuryVault, "OwnableUnauthorizedAccount", ["address"], [dev_wallet2.address])
+    ):
         treasury_vault.withdrawERC20(deposit_token.address, DEV_WALLET_ERC20_AMOUNT_TO_WITHDRAW, {"from": dev_wallet2})
 
 

@@ -216,7 +216,14 @@ def test_trigger_strategy_action_by_address_without_controller_role():
     strategy_vault = get_strategy_vault()
     strategy_vault_address = strategy_vault.address
     # Act / Assert
-    with reverts(encode_custom_error_data(Controller, "AccessControlUnauthorizedAccount", ["address", "bytes32"], [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE])):
+    with reverts(
+        encode_custom_error_data(
+            Controller,
+            "AccessControlUnauthorizedAccount",
+            ["address", "bytes32"],
+            [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE],
+        )
+    ):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
@@ -249,7 +256,14 @@ def test_remove_controller_role_from_address():
     # Act
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
     # Assert
-    with reverts(encode_custom_error_data(Controller, "AccessControlUnauthorizedAccount", ["address", "bytes32"], [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE])):
+    with reverts(
+        encode_custom_error_data(
+            Controller,
+            "AccessControlUnauthorizedAccount",
+            ["address", "bytes32"],
+            [dev_wallet2.address, CONTROLLER_CALLER_BYTES_ROLE],
+        )
+    ):
         controller.triggerStrategyAction(
             strategy_worker_address, strategy_vault_address, dev_wallet2, {"from": dev_wallet2}
         )
@@ -338,7 +352,10 @@ def test_add_controller_role_to_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    with reverts(encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address]) + ENCODER_SEPARATOR):
+    with reverts(
+        encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address])
+        + ENCODER_SEPARATOR
+    ):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == False
 
@@ -349,7 +366,10 @@ def test_remove_controller_role_from_address_by_non_admin():
     controller = Controller[-1]
     # Act/Assert
     controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet})
-    with reverts(encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address]) + ENCODER_SEPARATOR):
+    with reverts(
+        encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address])
+        + ENCODER_SEPARATOR
+    ):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet2) == True
 
@@ -359,7 +379,10 @@ def test_remove_controller_role_from_admin_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    with reverts(encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address]) + ENCODER_SEPARATOR):
+    with reverts(
+        encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address])
+        + ENCODER_SEPARATOR
+    ):
         controller.revokeRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, dev_wallet) == True
 
@@ -369,7 +392,10 @@ def test_add_controller_role_to_null_address_by_non_admin():
     # Arrange
     controller = Controller[-1]
     # Act/Assert
-    with reverts(encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address]) + ENCODER_SEPARATOR):
+    with reverts(
+        encode_custom_error_data(StrategyWorker, "AccessControlUnauthorizedAccount", ["address"], [dev_wallet2.address])
+        + ENCODER_SEPARATOR
+    ):
         controller.grantRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS, {"from": dev_wallet2})
     assert controller.hasRole(CONTROLLER_CALLER_BYTES_ROLE, NULL_ADDRESS) == False
 
